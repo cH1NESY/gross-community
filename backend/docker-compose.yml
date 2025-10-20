@@ -1,0 +1,53 @@
+version: "3.8"
+
+networks:
+  custom_network:
+    driver: bridge
+
+
+services:
+  web:
+    image: nginx
+    container_name: nginx-gross
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - .:/var/www/html
+    networks:
+      - custom_network
+    depends_on:
+      - php-fpm
+      - postgres
+
+  php-fpm:
+    container_name: php-fpm-gross
+    build: ./docker/php
+    restart: unless-stopped
+    volumes:
+      - .:/var/www/html
+      - ./docker/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-xdebug.ini
+    networks:
+      - custom_network
+    depends_on:
+      - postgres
+
+
+  postgres:
+    image: postgres:13.1
+    container_name: postgres-gross
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - custom_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
