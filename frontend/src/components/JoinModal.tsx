@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { FormData } from '../App';
+import TelegramModal from './TelegramModal';
 
 interface JoinModalProps {
   onClose: () => void;
@@ -23,6 +24,8 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
 
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [countryCode, setCountryCode] = useState('+7');
+  const [showTelegramModal, setShowTelegramModal] = useState(false);
+  const [userReferralLink, setUserReferralLink] = useState('');
 
   const countryCodes = [
     { code: '+7', country: 'RU' },
@@ -66,12 +69,7 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
       newErrors.agreeToPolicy = true;
     }
 
-    if (!formData.password || formData.password.length < 6) {
-      newErrors.password = 'Минимум 6 символов';
-    }
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Пароли не совпадают';
-    }
+    // Убираем валидацию пароля из формы регистрации
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -90,8 +88,6 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
         city: formData.city,
         email: formData.email,
         referral_link: formData.referralLink,
-        password: formData.password,
-        password_confirmation: formData.confirmPassword,
       };
 
       const response = await fetch('http://localhost/api/register', {
@@ -111,14 +107,11 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
         // Уведомляем Header об изменении состояния авторизации
         window.dispatchEvent(new CustomEvent('authChanged', { detail: data.user }));
         
-        // Показываем успешное сообщение
-        alert('Регистрация прошла успешно!');
-        
         // Переходим к следующему шагу
         if (action === 'consultation') {
           onConsultation();
         } else {
-          // редирект на оплату
+          // Переходим на страницу оплаты
           window.location.hash = '#/payment';
           window.dispatchEvent(new HashChangeEvent('hashchange'));
           onPayment();
@@ -276,38 +269,6 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Пароль *
-              </label>
-              <input
-                type="password"
-                value={formData.password || ''}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                className={`w-full px-4 py-3 border bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 outline-none placeholder-gray-400 ${errors.password ? 'border-red-400 focus:ring-red-400' : 'border-gray-600'}`}
-                placeholder="Минимум 6 символов"
-              />
-              {errors.password && (
-                <p className="text-red-400 text-sm mt-1">{errors.password as string}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Подтверждение пароля *
-              </label>
-              <input
-                type="password"
-                value={formData.confirmPassword || ''}
-                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                className={`w-full px-4 py-3 border bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 outline-none placeholder-gray-400 ${errors.confirmPassword ? 'border-red-400 focus:ring-red-400' : 'border-gray-600'}`}
-                placeholder="Повторите пароль"
-              />
-              {errors.confirmPassword && (
-                <p className="text-red-400 text-sm mt-1">{errors.confirmPassword as string}</p>
-              )}
-            </div>
-          </div>
 
           <div className="flex items-start space-x-3">
             <input
@@ -361,6 +322,13 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
           </div>
         </div>
       </div>
+      
+      {showTelegramModal && (
+        <TelegramModal
+          onClose={() => setShowTelegramModal(false)}
+          referralLink={userReferralLink}
+        />
+      )}
     </div>
   );
 };

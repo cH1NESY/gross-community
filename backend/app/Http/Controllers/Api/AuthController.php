@@ -19,7 +19,7 @@ class AuthController extends Controller
         $user = User::create([
             'full_name' => $validated['full_name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => null, // Пароль будет установлен после оплаты
             'telegram_tag' => $validated['telegram_tag'] ?? null,
             'phone' => $validated['phone'] ?? null,
             'city' => $validated['city'] ?? null,
@@ -29,7 +29,14 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json(['token' => $token, 'user' => ['id' => $user->id, 'full_name' => $user->full_name, 'email' => $user->email]]);
+        return response()->json([
+            'token' => $token, 
+            'user' => [
+                'id' => $user->id, 
+                'full_name' => $user->full_name, 
+                'email' => $user->email
+            ]
+        ]);
     }
 
     public function login(Request $request): JsonResponse
@@ -51,6 +58,32 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         return $request->user();
+    }
+
+    public function setupPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'password' => 'required|string|min:6',
+            'password_confirmation' => 'required|string|same:password',
+        ]);
+
+        $user = $request->user();
+        
+        // Обновляем пароль
+        $user->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        // Генерируем реферальную ссылку если её нет
+        if (!$user->referral_link) {
+            $referralLink = url('/') . '?ref=' . $user->id;
+            $user->update(['referral_link' => $referralLink]);
+        }
+
+        return response()->json([
+            'message' => 'Пароль успешно установлен',
+            'referral_link' => $user->referral_link
+        ]);
     }
 }
 

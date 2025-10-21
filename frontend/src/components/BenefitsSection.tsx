@@ -295,26 +295,41 @@ const BenefitsSection: React.FC = () => {
                     
                     {section.id === 'friends' ? (
                       <>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="rounded-xl border border-pink-500/20 bg-black/20 p-5 hover:bg-black/30 transition-colors">
-                            <h4 className="text-white font-semibold mb-2">Кто мы?</h4>
-                            <p className="text-pink-100 text-sm">
-                              Мы — онлайн-комьюнити с живыми филиалами в разных городах. Мы — как большая компания подруг, где каждая найдёт поддержку и вдохновение в любом уголке страны.
-                            </p>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                          <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="rounded-xl border border-pink-500/20 bg-black/20 p-5 hover:bg-black/30 transition-colors">
+                                <h4 className="text-white font-semibold mb-2">Кто мы?</h4>
+                                <p className="text-pink-100 text-sm">
+                                  Мы — онлайн-комьюнити с живыми филиалами в разных городах. Мы — как большая компания подруг, где каждая найдёт поддержку и вдохновение в любом уголке страны.
+                                </p>
+                              </div>
+                              <div className="rounded-xl border border-pink-500/20 bg-black/20 p-5 hover:bg-black/30 transition-colors">
+                                <h4 className="text-white font-semibold mb-2">Что мы создаём?</h4>
+                                <p className="text-pink-100 text-sm">
+                                  Женскую экосистему нового формата: не просто чат и встречи, а культуру солидарности и связи, которая не знает расстояний.
+                                </p>
+                              </div>
+                              <div className="rounded-xl border border-pink-500/20 bg-black/20 p-5 hover:bg-black/30 transition-colors">
+                                <h4 className="text-white font-semibold mb-2">Зачем мы это делаем?</h4>
+                                <ul className="list-disc list-inside text-pink-100 text-sm space-y-1">
+                                  <li>Чтобы женщины поддерживали женщин</li>
+                                  <li>Чтобы легко знакомиться и дружить</li>
+                                  <li>Чтобы обмениваться опытом и контактами</li>
+                                </ul>
+                              </div>
+                            </div>
                           </div>
-                          <div className="rounded-xl border border-pink-500/20 bg-black/20 p-5 hover:bg-black/30 transition-colors">
-                            <h4 className="text-white font-semibold mb-2">Что мы создаём?</h4>
-                            <p className="text-pink-100 text-sm">
-                              Женскую экосистему нового формата: не просто чат и встречи, а культуру солидарности и связи, которая не знает расстояний.
-                            </p>
-                          </div>
-                          <div className="rounded-xl border border-pink-500/20 bg-black/20 p-5 hover:bg-black/30 transition-colors">
-                            <h4 className="text-white font-semibold mb-2">Зачем мы это делаем?</h4>
-                            <ul className="list-disc list-inside text-pink-100 text-sm space-y-1">
-                              <li>Чтобы женщины поддерживали женщин</li>
-                              <li>Чтобы легко знакомиться и дружить</li>
-                              <li>Чтобы обмениваться опытом и контактами</li>
-                            </ul>
+                          <div className="relative">
+                            <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-pink-500/20">
+                              <img 
+                                src="./../../public/1.JPG"
+                                alt="Подруги в каждом городе"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br from-pink-500 to-pink-700 rounded-full opacity-20"></div>
+                            <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full opacity-30"></div>
                           </div>
                         </div>
 
@@ -342,18 +357,33 @@ const BenefitsSection: React.FC = () => {
                       </>
                     ) : section.id === 'support' ? (
                       <>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div className="rounded-2xl border border-pink-500/20 bg-black/20 p-6">
-                            <h4 className="text-white font-semibold mb-2">🤍 Взаимная поддержка</h4>
-                            <p className="text-pink-100 whitespace-pre-line text-sm text-justify">
-                              {'В нашем сообществе можно говорить обо всём: радостях, сложностях, мечтах и целях. Здесь тебя поймут, примут и поддержат — без оценок и сравнений.\nМы верим, что женская сила — в искренности и взаимопомощи. Здесь находят настоящих подруг, рядом и в радости, и в сомнениях.'}
-                              </p>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                          <div className="space-y-6">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div className="rounded-2xl border border-pink-500/20 bg-black/20 p-6">
+                                <h4 className="text-white font-semibold mb-2">🤍 Взаимная поддержка</h4>
+                                <p className="text-pink-100 whitespace-pre-line text-sm text-justify">
+                                  {'В нашем сообществе можно говорить обо всём: радостях, сложностях, мечтах и целях. Здесь тебя поймут, примут и поддержат — без оценок и сравнений.\nМы верим, что женская сила — в искренности и взаимопомощи. Здесь находят настоящих подруг, рядом и в радости, и в сомнениях.'}
+                                  </p>
+                              </div>
+                              <div className="rounded-2xl border border-pink-500/20 bg-black/20 p-6">
+                                <h4 className="text-white font-semibold mb-2">👩🏼‍💻 Коллаборации</h4>
+                                <p className="text-pink-100 text-sm text-justify">
+                                  Пространство возможностей: среди участниц — эксперты из разных сфер, инфлюенсеры, предприниматели, фрилансеры и креативные личности из разных городов.
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="rounded-2xl border border-pink-500/20 bg-black/20 p-6">
-                            <h4 className="text-white font-semibold mb-2">👩🏼‍💻 Коллаборации</h4>
-                            <p className="text-pink-100 text-sm text-justify">
-                              Пространство возможностей: среди участниц — эксперты из разных сфер, инфлюенсеры, предприниматели, фрилансеры и креативные личности из разных городов.
-                            </p>
+                          <div className="relative">
+                            <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-pink-500/20">
+                              <img 
+                                src="./../../public/2.jpg"
+                                alt="Взаимная поддержка и коллаборации"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br from-pink-500 to-pink-700 rounded-full opacity-20"></div>
+                            <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full opacity-30"></div>
                           </div>
                         </div>
                         <div className="mt-6 space-y-3 text-pink-100">
@@ -375,35 +405,50 @@ const BenefitsSection: React.FC = () => {
                       </>
                     ) : section.id === 'events' ? (
                       <>
-                        <div className="grid gap-4 overflow-visible">
-                          <HoverInfoOverlay
-                            index={20}
-                            title="💬 Живые встречи и общение"
-                            content={
-                              'Каждую неделю — один или два повода выйти из рутины, вдохновиться и провести время в компании близких по духу женщин. Мы устраиваем офлайн-встречи, мастермайнды, интерактивные игры, коуч-сессии, вечера разговоров по душам, а иногда просто собираемся на уютный girls talk с чашкой кофе.'
-                            }
-                          />
-                          <HoverInfoOverlay
-                            index={21}
-                            title="🌸 Развитие и вдохновение"
-                            content={
-                              'Наши мероприятия — это не только про веселье, но и про рост.\nМы проводим:\nмастер-классы и тренинги по личностному развитию, психологии и женственности;\nбизнес-завтраки и инстазавтраки — лёгкие, вдохновляющие и очень полезные для тех, кто хочет развивать своё дело;\nмастермайнды для обмена опытом, идей и поддержки;\nлекции от экспертов и инфлюенсеров из разных сфер — от маркетинга до саморазвития;\nигровые форматы и тематические вечеринки, где можно расслабиться, посмеяться и зарядиться энергией.'
-                            }
-                          />
-                          <HoverInfoOverlay
-                            index={22}
-                            title="💖 Атмосфера, ради которой хочется возвращаться"
-                            content={
-                              'Все наши встречи объединяет одно — душевность и живое общение. Мы смеёмся, делимся опытом, поддерживаем друг друга, вместе развиваемся и вдохновляемся.\nВ нашем клубе ты не просто участница — ты часть тёплого, дружеского комьюнити, где каждая женщина важна, интересна и ценна.'
-                            }
-                          />
-                          <HoverInfoOverlay
-                            index={23}
-                            title="🌷 Более 50 мероприятий в год"
-                            content={
-                              '🌷 Более 50 мероприятий в год — это возможность жить ярче, чувствовать поддержку и быть частью круга амбициозных, искренних и настоящих женщин.'
-                            }
-                          />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                          <div className="space-y-6">
+                            <div className="grid gap-4 overflow-visible">
+                              <HoverInfoOverlay
+                                index={20}
+                                title="💬 Живые встречи и общение"
+                                content={
+                                  'Каждую неделю — один или два повода выйти из рутины, вдохновиться и провести время в компании близких по духу женщин. Мы устраиваем офлайн-встречи, мастермайнды, интерактивные игры, коуч-сессии, вечера разговоров по душам, а иногда просто собираемся на уютный girls talk с чашкой кофе.'
+                                }
+                              />
+                              <HoverInfoOverlay
+                                index={21}
+                                title="🌸 Развитие и вдохновение"
+                                content={
+                                  'Наши мероприятия — это не только про веселье, но и про рост.\nМы проводим:\nмастер-классы и тренинги по личностному развитию, психологии и женственности;\nбизнес-завтраки и инстазавтраки — лёгкие, вдохновляющие и очень полезные для тех, кто хочет развивать своё дело;\nмастермайнды для обмена опытом, идей и поддержки;\nлекции от экспертов и инфлюенсеров из разных сфер — от маркетинга до саморазвития;\nигровые форматы и тематические вечеринки, где можно расслабиться, посмеяться и зарядиться энергией.'
+                                }
+                              />
+                              <HoverInfoOverlay
+                                index={22}
+                                title="💖 Атмосфера, ради которой хочется возвращаться"
+                                content={
+                                  'Все наши встречи объединяет одно — душевность и живое общение. Мы смеёмся, делимся опытом, поддерживаем друг друга, вместе развиваемся и вдохновляемся.\nВ нашем клубе ты не просто участница — ты часть тёплого, дружеского комьюнити, где каждая женщина важна, интересна и ценна.'
+                                }
+                              />
+                              <HoverInfoOverlay
+                                index={23}
+                                title="🌷 Более 50 мероприятий в год"
+                                content={
+                                  '🌷 Более 50 мероприятий в год — это возможность жить ярче, чувствовать поддержку и быть частью круга амбициозных, искренних и настоящих женщин.'
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-pink-500/20">
+                              <img 
+                                src="./../../public/3.JPG"
+                                alt="Более 50 мероприятий в год"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br from-pink-500 to-pink-700 rounded-full opacity-20"></div>
+                            <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full opacity-30"></div>
+                          </div>
                         </div>
                         <div className="mt-6">
                           <button onClick={() => window.dispatchEvent(new Event('open-join-modal'))} className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg">
@@ -413,74 +458,55 @@ const BenefitsSection: React.FC = () => {
                       </>
                     ) : section.id === 'chats' ? (
                       <>
-                        <div className="relative z-0">
-                          <button
-                            aria-label="Prev"
-                            className="hidden md:flex items-center justify-center absolute left-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm pointer-events-auto"
-                            onClick={handleChatsPrev}
-                          >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                          </button>
-                          <div ref={chatsRef} data-chats-scroller className="flex gap-6 overflow-x-auto pb-3 scrollbar-hide px-16 scroll-smooth z-0">
-                            <div
-                              className="relative min-w-[360px] min-h-[260px] snap-start rounded-2xl border border-pink-500/20 bg-black/20 p-6 overflow-hidden"
-                              style={{ backgroundImage: 'url(https://i.pinimg.com/736x/92/08/e6/9208e6fe18bb9c1331de546478bc7387.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                          <div className="flex flex-col items-center space-y-3">
+                            <div 
+                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              style={{ backgroundImage: 'url(./../../public/4_1.JPG)' }}
                             >
-                              <div className="absolute inset-0 bg-black/55" />
-                              <div className="relative z-10">
-                              <h4 className="text-white font-semibold mb-2">🌿 Душа</h4>
-                              <p className="text-pink-100 text-sm whitespace-pre-line text-justify">{'• Чат Болталка — уютный чат, где можно поговорить обо всём.\n\n• Чат с психологом — пространство осознанности и заботы о себе.'}</p>
-                              </div>
                             </div>
-                            <div
-                              className="relative min-w-[360px] min-h-[260px] snap-start rounded-2xl border border-pink-500/20 bg-black/20 p-6 overflow-hidden"
-                              style={{ backgroundImage: 'url(https://i.pinimg.com/736x/98/86/80/9886801f070c8fc907a704edd427ff76.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
-                            >
-                              <div className="absolute inset-0 bg-black/55" />
-                              <div className="relative z-10">
-                              <h4 className="text-white font-semibold mb-2">💪 Тело</h4>
-                              <p className="text-pink-100 text-sm whitespace-pre-line text-justify">{'• Фитнес-чат — совместные тренировки и мотивация.\n\n• Растяжка и лимфодренаж — гибкость и лёгкость.\n\n• Питание — здоровые привычки и рацион от нутрициолога.'}</p>
-                              </div>
-                            </div>
-                            <div
-                              className="relative min-w-[360px] min-h-[260px] snap-start rounded-2xl border border-pink-500/20 bg-black/20 p-6 overflow-hidden"
-                              style={{ backgroundImage: 'url(https://i.pinimg.com/236x/8c/7b/a4/8c7ba41a4a280a913d8b4a14bdf8b250.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
-                            >
-                              <div className="absolute inset-0 bg-black/55" />
-                              <div className="relative z-10">
-                              <h4 className="text-white font-semibold mb-2">✨ Дух</h4>
-                              <p className="text-pink-100 text-sm text-justify">{'• Духовное развитие — про смысл, гармонию и внутренний рост.'}</p>
-                              </div>
-                            </div>
-                            <div
-                              className="relative min-w-[360px] min-h-[260px] snap-start rounded-2xl border border-pink-500/20 bg-black/20 p-6 overflow-hidden"
-                              style={{ backgroundImage: 'url(https://i.pinimg.com/originals/07/df/26/07df26bdd55c682084dfd7208cab51f4.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
-                            >
-                              <div className="absolute inset-0 bg-black/55" />
-                              <div className="relative z-10">
-                              <h4 className="text-white font-semibold mb-2">👩🏼‍💻 Развитие</h4>
-                              <p className="text-pink-100 text-sm whitespace-pre-line text-justify">{'• Инстаграм-чат — личный бренд, визуал и монетизация.\n\n• Чат Активности — взаимная поддержка контента.'}</p>
-                              </div>
-                            </div>
-                            <div
-                              className="relative min-w-[360px] min-h-[260px] snap-start rounded-2xl border border-pink-500/20 bg-black/20 p-6 overflow-hidden"
-                              style={{ backgroundImage: 'url(https://i.pinimg.com/236x/27/3e/94/273e94943085820531d9b0059e20e46d.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
-                            >
-                              <div className="absolute inset-0 bg-black/55" />
-                              <div className="relative z-10">
-                              <h4 className="text-white font-semibold mb-2">✈️ Путешествия</h4>
-                              <p className="text-pink-100 text-sm text-justify">{'• Чат «Туры» — совместные поездки от локальных выездов до международных туров.'}</p>
-                              </div>
-                            </div>
+                            <p className="text-white text-sm text-center font-medium">• Чат по развитию Instagram</p>
                           </div>
-                          {/* убраны точки пагинации по запросу */}
-                          <button
-                            aria-label="Next"
-                            className="hidden md:flex items-center justify-center absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm"
-                            onClick={handleChatsNext}
-                          >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                          </button>
+                          <div className="flex flex-col items-center space-y-3">
+                            <div 
+                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              style={{ backgroundImage: 'url(./../../public/4_2.JPG)' }}
+                            >
+                            </div>
+                            <p className="text-white text-sm text-center font-medium">• Чат с домашними тренировками</p>
+                          </div>
+                          <div className="flex flex-col items-center space-y-3">
+                            <div 
+                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              style={{ backgroundImage: 'url(./../../public/4_3.JPG)' }}
+                            >
+                            </div>
+                            <p className="text-white text-sm text-center font-medium">• Чат с нутрициологом</p>
+                          </div>
+                          <div className="flex flex-col items-center space-y-3">
+                            <div 
+                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              style={{ backgroundImage: 'url(./../../public/4_4.JPG)' }}
+                            >
+                            </div>
+                            <p className="text-white text-sm text-center font-medium">• Чат по духовному развитию</p>
+                          </div>
+                          <div className="flex flex-col items-center space-y-3">
+                            <div 
+                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              style={{ backgroundImage: 'url(./../../public/4_5.JPG)' }}
+                            >
+                            </div>
+                            <p className="text-white text-sm text-center font-medium">• Чат общения</p>
+                          </div>
+                          <div className="flex flex-col items-center space-y-3">
+                            <div 
+                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              style={{ backgroundImage: 'url(./../../public/4_6.JPG)' }}
+                            >
+                            </div>
+                            <p className="text-white text-sm text-center font-medium">• Чат с психологом</p>
+                          </div>
                         </div>
                         <div className="mt-6 space-y-3 text-pink-100">
                           <p>
@@ -515,7 +541,7 @@ const BenefitsSection: React.FC = () => {
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 w-[min(1100px,90vw)]">
                                 <div
                                   className="relative min-h-[300px] lg:min-h-[420px]"
-                                  style={{ backgroundImage: 'url(https://www.flagman.travel/upload/medialibrary/8a4/8a40949a8aaa3588794fc909afc790c8.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+                                  style={{ backgroundImage: 'url(./../../public/5.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
                                 >
                                   <div className="absolute inset-0 bg-black/40" />
                                   <div className="relative z-10 p-6 lg:p-10">
