@@ -57,7 +57,18 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        return $request->user();
+        $user = $request->user();
+        return [
+            'id' => $user->id,
+            'full_name' => $user->full_name,
+            'email' => $user->email,
+            'telegram_tag' => $user->telegram_tag,
+            'phone' => $user->phone,
+            'city' => $user->city,
+            'referral_link' => $user->referral_link,
+            'has_password' => !is_null($user->password),
+            'created_at' => $user->created_at,
+        ];
     }
 
     public function setupPassword(Request $request): JsonResponse
