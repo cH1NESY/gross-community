@@ -102,6 +102,7 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem('api_token', data.token);
+        localStorage.removeItem('payment_success_shown'); // Очищаем флаг при новой регистрации
         console.log('Registration successful:', data);
         
         // Уведомляем Header об изменении состояния авторизации
@@ -119,7 +120,17 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
       } else {
         const errorData = await response.json();
         console.error('Registration failed:', errorData);
-        alert(`Ошибка регистрации: ${errorData.message || 'Неизвестная ошибка'}`);
+        
+        // Обработка ошибок валидации
+        if (errorData.errors) {
+          const errorMessages: string[] = [];
+          Object.keys(errorData.errors).forEach(field => {
+            errorMessages.push(...errorData.errors[field]);
+          });
+          alert(`Ошибки регистрации:\n${errorMessages.join('\n')}`);
+        } else {
+          alert(`Ошибка регистрации: ${errorData.message || 'Неизвестная ошибка'}`);
+        }
       }
     } catch (error) {
       console.error('Network error:', error);

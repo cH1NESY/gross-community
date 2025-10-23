@@ -269,7 +269,7 @@ const BenefitsSection: React.FC = () => {
   );
 
   return (
-    <div className="bg-gradient-to-b from-black to-gray-900">
+    <div>
       {sections.map((section, index) => {
         const IconComponent = section.icon;
         const isReverse = index % 2 === 1;
@@ -462,10 +462,10 @@ const BenefitsSection: React.FC = () => {
                           <div className="flex flex-col items-center space-y-3">
                             <div 
                               className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
-                              style={{ backgroundImage: 'url(./../../public/4_1.JPG)' }}
+                              style={{ backgroundImage: 'url(./../../public/4_1.jpg)' }}
                             >
                             </div>
-                            <p className="text-white text-sm text-center font-medium">• Чат по развитию Instagram</p>
+                            <p className="text-white text-sm text-center font-medium">• Чат по развитию соц. сетей</p>
                           </div>
                           <div className="flex flex-col items-center space-y-3">
                             <div 
@@ -676,7 +676,7 @@ const BenefitsSection: React.FC = () => {
       })}
       
       {/* Итоговый CTA-блок (заменён на крупный вопрос) */}
-      <section className="py-24 bg-gradient-to-r from-pink-900 to-black">
+      <section className="py-24 bg-gradient-to-r from-pink-900/30 to-purple-900/30">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold uppercase tracking-wide text-white">
             ГОТОВА НАЙТИ ПОДРУГ ПО ВСЕЙ СТРАНЕ?

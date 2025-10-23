@@ -23,7 +23,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onJoinClick, onScrollToSectio
   };
 
   return (
-    <section className="bg-gradient-to-br from-black via-gray-900 to-pink-900 py-16 lg:py-24">
+    <section className="py-16 lg:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
@@ -63,14 +63,19 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onJoinClick, onScrollToSectio
           </div>
           
           <div className="relative">
-            <div className="w-[320px] h-[540px] sm:w-[360px] sm:h-[620px] bg-gradient-to-br from-pink-600 to-pink-800 rounded-3xl p-6 shadow-2xl mx-auto flex items-center justify-center">
+            <div className="w-[400px] h-[540px] sm:w-[450px] sm:h-[620px] bg-gradient-to-br from-pink-600 to-pink-800 rounded-3xl p-6 shadow-2xl mx-auto flex items-center justify-center overflow-hidden">
               <img
-                src={womanImg}
+                src="./../../public/0.jpg"
                 alt="Успешная женщина"
-                className="w-full h-full object-contain rounded-xl"
+                className="w-full h-full object-cover rounded-xl"
+                style={{
+                  imageRendering: 'auto'
+                }}
               />
             </div>
-
+            {/* Декоративные элементы */}
+            <div className="absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br from-pink-500 to-pink-700 rounded-full opacity-20"></div>
+            <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full opacity-30"></div>
           </div>
         </div>
       </div>

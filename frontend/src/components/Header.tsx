@@ -64,6 +64,7 @@ const Header: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('api_token');
+    localStorage.removeItem('payment_success_shown'); // Очищаем флаг показа модала
     setUser(null);
     
     // Уведомляем другие компоненты о выходе

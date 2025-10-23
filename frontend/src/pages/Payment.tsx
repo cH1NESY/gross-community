@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ThankYouModal from '../components/ThankYouModal';
 import PasswordSetupModal from '../components/PasswordSetupModal';
+import TelegramModal from '../components/TelegramModal';
 
 const Card: React.FC<{ title: string; value: string; note?: string }> = ({ title, value, note }) => (
   <div className="rounded-2xl p-6 bg-gradient-to-br from-gray-900/80 to-black/80 border border-pink-500/30 shadow-[0_10px_40px_-10px_rgba(236,72,153,0.4)]">
@@ -13,27 +14,51 @@ const Card: React.FC<{ title: string; value: string; note?: string }> = ({ title
 const Payment: React.FC = () => {
   const [showThanks, setShowThanks] = useState(false);
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
+  const [showTelegramModal, setShowTelegramModal] = useState(false);
+  const [referralLink, setReferralLink] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
   useEffect(() => {
     // Проверяем, вернулся ли пользователь после оплаты
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === '1') {
-      // Получаем ID пользователя из токена
-      const token = localStorage.getItem('api_token');
-      if (token) {
-        // Декодируем токен чтобы получить user_id (упрощенная версия)
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          setUserId(payload.sub || 1); // fallback на 1 если не найдем
-          setShowPasswordSetup(true);
-        } catch (e) {
-          console.error('Error parsing token:', e);
-          setUserId(1); // fallback
-          setShowPasswordSetup(true);
-        }
+      // Проверяем, не показывали ли уже модал для этого пользователя
+      const hasShownModal = localStorage.getItem('payment_success_shown');
+      if (!hasShownModal) {
+        checkUserPasswordStatus();
+        // Помечаем, что модал уже показан
+        localStorage.setItem('payment_success_shown', 'true');
       }
+      // Убираем параметр из URL чтобы не показывать модал при повторных заходах
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  const checkUserPasswordStatus = async () => {
+    try {
+      const response = await fetch('http://localhost/api/user', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('api_token')}`,
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUserId(userData.id);
+        
+        // Показываем форму создания пароля только если пароль еще не установлен
+        if (!userData.has_password) {
+          setShowPasswordSetup(true);
+        } else {
+          // Если пароль уже есть, показываем Telegram модал
+          setReferralLink(userData.referral_link || `${window.location.origin}?ref=${userData.id}`);
+          setShowTelegramModal(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking user status:', error);
+    }
+  };
 
   const triggerPayment = async () => {
     try {
@@ -124,6 +149,12 @@ const Payment: React.FC = () => {
           <PasswordSetupModal 
             onClose={() => setShowPasswordSetup(false)} 
             userId={userId} 
+          />
+        )}
+        {showTelegramModal && (
+          <TelegramModal
+            onClose={() => setShowTelegramModal(false)}
+            referralLink={referralLink}
           />
         )}
       </div>

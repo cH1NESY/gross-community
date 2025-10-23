@@ -14,10 +14,18 @@
   }
   
   body {
-    background-color: #251421; /* более розовый, чем чисто черный */
+    background: linear-gradient(to bottom, #0f0f23, #1a0b2e, #2d1b69);
     color: #ffffff;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Улучшение качества изображений */
+  img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: high-quality;
+    -ms-interpolation-mode: bicubic;
   }
   
   * {
