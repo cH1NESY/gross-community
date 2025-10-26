@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\UserSubmissionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ReferralController;
+use App\Http\Controllers\Api\EarningController;
+use App\Http\Controllers\Api\WithdrawalController;
 
 Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
@@ -16,6 +19,19 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/setup-password', [AuthController::class, 'setupPassword']);
+    
+    // Реферальная программа
+    Route::get('/referrals', [ReferralController::class, 'getReferrals']);
+    Route::get('/referrals/stats', [ReferralController::class, 'getStats']);
+    
+    // Вознаграждения
+    Route::get('/earnings', [EarningController::class, 'getEarnings']);
+    Route::get('/earnings/stats', [EarningController::class, 'getStats']);
+    
+    // Вывод средств
+    Route::get('/withdrawals', [WithdrawalController::class, 'getWithdrawals']);
+    Route::post('/withdrawals', [WithdrawalController::class, 'createWithdrawal']);
+    Route::get('/withdrawals/payment-methods', [WithdrawalController::class, 'getPaymentMethods']);
 });
 
 // Платежи (публичный create, webhook)

@@ -128,7 +128,7 @@ const Header: React.FC = () => {
               
               {/* Место для номера телефона */}
               <div className="text-white font-medium">
-                +7 (XXX) XXX-XX-XX
+                +7 (914) 946-90-62
               </div>
             </div>
           </div>
