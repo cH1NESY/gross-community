@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ThankYouModal from '../components/ThankYouModal';
 import PasswordSetupModal from '../components/PasswordSetupModal';
 import TelegramModal from '../components/TelegramModal';
+import { safeFetch, safeNavigate, safeHistoryReplace } from '../utils/safeAsync';
 
 const Card: React.FC<{ title: string; value: string; note?: string }> = ({ title, value, note }) => (
   <div className="rounded-2xl p-6 bg-gradient-to-br from-gray-900/80 to-black/80 border border-pink-500/30 shadow-[0_10px_40px_-10px_rgba(236,72,153,0.4)]">
@@ -28,21 +29,22 @@ const Payment: React.FC = () => {
         // Помечаем, что модал уже показан
         localStorage.setItem('payment_success_shown', 'true');
       }
-      // Убираем параметр из URL чтобы не показывать модал при повторных заходах
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // Убираем параметр из URL, сохраняя hash для правильного роутинга
+      const newUrl = window.location.pathname + window.location.hash;
+      safeHistoryReplace(newUrl);
     }
   }, []);
 
   const checkUserPasswordStatus = async () => {
-    try {
-      const response = await fetch('http://localhost/api/user', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('api_token')}`,
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
+    const response = await safeFetch('http://localhost/api/user', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('api_token')}`,
+        'Accept': 'application/json'
+      }
+    }, 10000);
+    
+    if (response && response.ok) {
+      try {
         const userData = await response.json();
         setUserId(userData.id);
         
@@ -54,31 +56,42 @@ const Payment: React.FC = () => {
           setReferralLink(userData.referral_link || `${window.location.origin}?ref=${userData.id}`);
           setShowTelegramModal(true);
         }
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('payment_success_shown');
       }
-    } catch (error) {
-      console.error('Error checking user status:', error);
+    } else {
+      console.error('Failed to fetch user data:', response?.status);
+      // Если не удалось получить данные пользователя, очищаем флаг
+      localStorage.removeItem('payment_success_shown');
     }
   };
 
   const triggerPayment = async () => {
-    try {
-      const res = await fetch('http://localhost/api/payments', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('api_token')}`
-        },
-        body: JSON.stringify({ amount: 3500 }),
-      });
-      const data = await res.json();
-      if (res.ok && data.confirmation_url) {
-        window.location.href = data.confirmation_url;
-      } else {
-        alert('Не удалось создать платеж');
+    const response = await safeFetch('http://localhost/api/payments', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('api_token')}`
+      },
+      body: JSON.stringify({ amount: 3500 })
+    }, 15000);
+    
+    if (response && response.ok) {
+      try {
+        const data = await response.json();
+        if (data.confirmation_url) {
+          safeNavigate(data.confirmation_url);
+        } else {
+          alert('Не удалось получить ссылку для оплаты');
+        }
+      } catch (error) {
+        console.error('Error parsing payment response:', error);
+        alert('Ошибка при обработке ответа платежной системы');
       }
-    } catch (e) {
-      alert('Ошибка сети при создании платежа');
+    } else {
+      alert('Не удалось создать платеж. Проверьте подключение к интернету.');
     }
   };
   return (

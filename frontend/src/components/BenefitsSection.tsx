@@ -517,7 +517,7 @@ const BenefitsSection: React.FC = () => {
                           </p>
                         </div>
                         <div className="mt-6">
-                          <button className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg">
+                          <button onClick={() => window.dispatchEvent(new Event('open-join-modal'))} className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg">
                             Присоединиться
                           </button>
                         </div>

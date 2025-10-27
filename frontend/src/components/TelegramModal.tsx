@@ -10,7 +10,17 @@ const TelegramModal: React.FC<TelegramModalProps> = ({ onClose, referralLink }) 
   const telegramLink = 'https://t.me/+aFY9v4vcCOoyMTUy';
 
   const handleJoinTelegram = () => {
-    window.open(telegramLink, '_blank');
+    try {
+      window.open(telegramLink, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Error opening Telegram:', error);
+      // Fallback - копируем ссылку в буфер обмена
+      navigator.clipboard.writeText(telegramLink).then(() => {
+        alert('Ссылка скопирована в буфер обмена: ' + telegramLink);
+      }).catch(() => {
+        alert('Ссылка на Telegram чат: ' + telegramLink);
+      });
+    }
   };
 
   return (
@@ -50,7 +60,25 @@ const TelegramModal: React.FC<TelegramModalProps> = ({ onClose, referralLink }) 
                   className="flex-1 px-3 py-2 bg-gray-700 text-white text-sm rounded border border-gray-600"
                 />
                 <button
-                  onClick={() => navigator.clipboard.writeText(referralLink)}
+                  onClick={() => {
+                    try {
+                      navigator.clipboard.writeText(referralLink).then(() => {
+                        alert('Реферальная ссылка скопирована!');
+                      }).catch(() => {
+                        // Fallback для старых браузеров
+                        const textArea = document.createElement('textarea');
+                        textArea.value = referralLink;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        alert('Реферальная ссылка скопирована!');
+                      });
+                    } catch (error) {
+                      console.error('Error copying referral link:', error);
+                      alert('Реферальная ссылка: ' + referralLink);
+                    }
+                  }}
                   className="px-3 py-2 bg-pink-500 hover:bg-pink-600 text-white text-sm rounded transition-colors"
                 >
                   Копировать

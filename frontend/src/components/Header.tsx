@@ -75,11 +75,11 @@ const Header: React.FC = () => {
   };
 
   const handleWhatsAppClick = () => {
-    window.open('https://wa.me/your-whatsapp-number', '_blank');
+    window.open('https://wa.me/79149469062', '_blank');
   };
 
   const handleTelegramClick = () => {
-    window.open('https://t.me/your-telegram-username', '_blank');
+    window.open('https://t.me/grosscommunity', '_blank');
   };
 
   return (

@@ -293,11 +293,11 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
             />
             <label htmlFor="agreeToPolicy" className="text-sm text-gray-300">
               Я соглашаюсь с условиями{' '}
-              <a href="#" className="text-pink-400 underline hover:text-pink-300">
+              <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" className="text-pink-400 underline hover:text-pink-300">
                 политики конфиденциальности
               </a>{' '}
               и даю{' '}
-              <a href="#" className="text-pink-400 underline hover:text-pink-300">
+              <a href="/personal-data-consent.html" target="_blank" rel="noopener noreferrer" className="text-pink-400 underline hover:text-pink-300">
                 согласие на обработку моих персональных данных
               </a>
             </label>

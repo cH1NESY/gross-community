@@ -40,6 +40,10 @@ const PasswordSetupModal: React.FC<PasswordSetupModalProps> = ({ onClose, userId
     setIsLoading(true);
 
     try {
+      // Добавляем таймаут для предотвращения зависания
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
+
       const response = await fetch('http://localhost/api/setup-password', {
         method: 'POST',
         headers: { 
@@ -51,7 +55,10 @@ const PasswordSetupModal: React.FC<PasswordSetupModalProps> = ({ onClose, userId
           password: password,
           password_confirmation: confirmPassword,
         }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -63,7 +70,11 @@ const PasswordSetupModal: React.FC<PasswordSetupModalProps> = ({ onClose, userId
       }
     } catch (error) {
       console.error('Network error:', error);
-      alert('Ошибка сети. Проверьте подключение к интернету.');
+      if (error.name === 'AbortError') {
+        alert('Превышено время ожидания. Проверьте подключение к интернету.');
+      } else {
+        alert('Ошибка сети. Проверьте подключение к интернету.');
+      }
     } finally {
       setIsLoading(false);
     }

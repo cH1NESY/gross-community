@@ -693,8 +693,8 @@ const Account: React.FC = () => {
             <h2 className="text-xl font-semibold mb-3">Поддержка</h2>
             <p className="text-pink-100 text-sm">Если возникли вопросы — напишите менеджеру сообщества, мы поможем.</p>
             <div className="mt-4 flex gap-3">
-              <a href="https://t.me/your-telegram-username" target="_blank" rel="noreferrer" className="bg-white/10 hover:bg-white/20 text-pink-100 px-4 py-2 rounded-lg border border-white/20 transition-all">Telegram</a>
-              <a href="mailto:support@example.com" className="bg-white/10 hover:bg-white/20 text-pink-100 px-4 py-2 rounded-lg border border-white/20 transition-all">Email</a>
+              <a href="https://t.me/grosscommunity" target="_blank" rel="noreferrer" className="bg-white/10 hover:bg-white/20 text-pink-100 px-4 py-2 rounded-lg border border-white/20 transition-all">Telegram</a>
+              <a href="https://wa.me/79149469062" target="_blank" rel="noreferrer" className="bg-white/10 hover:bg-white/20 text-pink-100 px-4 py-2 rounded-lg border border-white/20 transition-all">WhatsApp</a>
             </div>
           </div>
         </div>

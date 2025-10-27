@@ -29,11 +29,38 @@ function App() {
   useEffect(() => {
     const openJoinHandler = () => setShowJoinModal(true);
     window.addEventListener('open-join-modal', openJoinHandler as EventListener);
-    const onHash = () => setCurrentHash(window.location.hash || '');
+    const onHash = () => {
+      try {
+        const newHash = window.location.hash || '';
+        console.log('Hash changed to:', newHash);
+        setCurrentHash(newHash);
+      } catch (error) {
+        console.error('Error handling hash change:', error);
+        // В случае ошибки устанавливаем дефолтный hash
+        setCurrentHash('');
+      }
+    };
     window.addEventListener('hashchange', onHash);
+    
+    // Глобальная обработка ошибок для предотвращения зависания
+    const handleError = (event: ErrorEvent) => {
+      console.error('Global error:', event.error);
+      // Не даем ошибкам ломать приложение
+    };
+    
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      // Не даем необработанным промисам ломать приложение
+    };
+    
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
     return () => {
       window.removeEventListener('open-join-modal', openJoinHandler as EventListener);
       window.removeEventListener('hashchange', onHash);
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, []);
 
