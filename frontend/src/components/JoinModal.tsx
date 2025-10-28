@@ -5,7 +5,7 @@ import TelegramModal from './TelegramModal';
 
 interface JoinModalProps {
   onClose: () => void;
-  onConsultation: () => void;
+  onConsultation: (userData?: FormData) => void;
   onPayment: () => void;
 }
 
@@ -110,7 +110,7 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
         
         // Переходим к следующему шагу
         if (action === 'consultation') {
-          onConsultation();
+          onConsultation(formData);
         } else {
           // Переходим на страницу оплаты
           window.location.hash = '#/payment';

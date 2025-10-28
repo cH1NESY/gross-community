@@ -25,6 +25,11 @@ function App() {
   const [showThankYouModal, setShowThankYouModal] = useState(false); // reserved for future
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const [currentHash, setCurrentHash] = useState<string>(window.location.hash);
+  const [consultationUserData, setConsultationUserData] = useState<{
+    fullName: string;
+    phone: string;
+    email: string;
+  } | null>(null);
 
   useEffect(() => {
     const openJoinHandler = () => setShowJoinModal(true);
@@ -81,8 +86,15 @@ function App() {
     setShowConsultationModal(false);
   };
 
-  const handleConsultation = () => {
+  const handleConsultation = (userData?: FormData) => {
     setShowJoinModal(false);
+    if (userData) {
+      setConsultationUserData({
+        fullName: userData.fullName,
+        phone: userData.phone,
+        email: userData.email
+      });
+    }
     setShowConsultationModal(true);
   };
 
@@ -120,7 +132,10 @@ function App() {
       {/* Страница благодарности показывается из Payment */}
       
       {showConsultationModal && (
-        <ConsultationModal onClose={handleCloseModal} />
+        <ConsultationModal 
+          onClose={handleCloseModal} 
+          userData={consultationUserData || undefined}
+        />
       )}
     </div>
   );
