@@ -275,21 +275,21 @@ const BenefitsSection: React.FC = () => {
         const isReverse = index % 2 === 1;
         
         return (
-          <section key={section.id} id={section.id} className="py-24 border-b border-pink-500/10">
+          <section key={section.id} id={section.id} className="py-12 sm:py-16 lg:py-24 border-b border-pink-500/10">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className={`grid grid-cols-1`}>
-                <div className={`space-y-8`}>
-                  <div className="space-y-6">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-gradient-to-br from-pink-500 to-pink-700 rounded-xl">
-                        <IconComponent className="w-8 h-8 text-white" />
+                <div className={`space-y-6 sm:space-y-8`}>
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="flex items-center space-x-3 sm:space-x-4">
+                      <div className="p-2 sm:p-3 bg-gradient-to-br from-pink-500 to-pink-700 rounded-lg sm:rounded-xl flex-shrink-0">
+                        <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                       </div>
-                      <h2 className="text-3xl lg:text-4xl font-bold text-white">
+                      <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
                         {section.title}
                       </h2>
                     </div>
                     
-                    <p className="text-lg text-gray-300 leading-relaxed text-justify whitespace-pre-line">
+                    <p className="text-base sm:text-lg text-gray-300 leading-relaxed text-justify whitespace-pre-line">
                       {section.description}
                     </p>
                     
@@ -458,54 +458,54 @@ const BenefitsSection: React.FC = () => {
                       </>
                     ) : section.id === 'chats' ? (
                       <>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                          <div className="flex flex-col items-center space-y-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto">
+                          <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
-                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
                               style={{ backgroundImage: 'url(./../../public/4_1.jpg)' }}
                             >
                             </div>
-                            <p className="text-white text-sm text-center font-medium">• Чат по развитию соц. сетей</p>
+                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат по развитию соц. сетей</p>
                           </div>
-                          <div className="flex flex-col items-center space-y-3">
+                          <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
-                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
                               style={{ backgroundImage: 'url(./../../public/4_2.JPG)' }}
                             >
                             </div>
-                            <p className="text-white text-sm text-center font-medium">• Чат с домашними тренировками</p>
+                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат с домашними тренировками</p>
                           </div>
-                          <div className="flex flex-col items-center space-y-3">
+                          <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
-                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
                               style={{ backgroundImage: 'url(./../../public/4_3.JPG)' }}
                             >
                             </div>
-                            <p className="text-white text-sm text-center font-medium">• Чат с нутрициологом</p>
+                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат с нутрициологом</p>
                           </div>
-                          <div className="flex flex-col items-center space-y-3">
+                          <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
-                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
                               style={{ backgroundImage: 'url(./../../public/4_4.JPG)' }}
                             >
                             </div>
-                            <p className="text-white text-sm text-center font-medium">• Чат по духовному развитию</p>
+                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат по духовному развитию</p>
                           </div>
-                          <div className="flex flex-col items-center space-y-3">
+                          <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
-                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
                               style={{ backgroundImage: 'url(./../../public/4_5.JPG)' }}
                             >
                             </div>
-                            <p className="text-white text-sm text-center font-medium">• Чат общения</p>
+                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат общения</p>
                           </div>
-                          <div className="flex flex-col items-center space-y-3">
+                          <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
-                              className="w-24 h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
+                              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
                               style={{ backgroundImage: 'url(./../../public/4_6.JPG)' }}
                             >
                             </div>
-                            <p className="text-white text-sm text-center font-medium">• Чат с психологом</p>
+                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат с психологом</p>
                           </div>
                         </div>
                         <div className="mt-6 space-y-3 text-pink-100">
@@ -525,38 +525,38 @@ const BenefitsSection: React.FC = () => {
                     ) : section.id === 'tours' ? (
                       <>
                         <div className="mt-6">
-                          <h4 className="text-2xl font-semibold text-white mb-4">Ближайшие туры</h4>
+                          <h4 className="text-xl sm:text-2xl font-semibold text-white mb-4">Ближайшие туры</h4>
                           <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-                            <div className="relative w-full bg-gradient-to-r from-pink-900/20 to-black/20 border border-pink-500/20 rounded-2xl overflow-hidden">
+                            <div className="relative w-full bg-gradient-to-r from-pink-900/20 to-black/20 border border-pink-500/20 rounded-xl sm:rounded-2xl overflow-hidden">
                               {showTourArrows && (
                               <button
                                 aria-label="Prev tours"
-                                className="hidden md:flex items-center justify-center absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm"
+                                className="hidden md:flex items-center justify-center absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm"
                                 onClick={() => handleToursScroll('prev')}
                               >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="15 18 9 12 15 6"></polyline></svg>
                               </button>
                               )}
-                              <div ref={toursRef} className="grid grid-flow-col auto-cols-[minmax(280px,1fr)] gap-6 overflow-x-auto scroll-smooth px-12 py-4">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 w-[min(1100px,90vw)]">
+                              <div ref={toursRef} className="grid grid-flow-col auto-cols-[minmax(280px,1fr)] gap-4 sm:gap-6 overflow-x-auto scroll-smooth px-4 sm:px-8 lg:px-12 py-4 scrollbar-hide">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 w-[min(1100px,95vw)]">
                                 <div
-                                  className="relative min-h-[300px] lg:min-h-[420px]"
-                                  style={{ backgroundImage: 'url(./../../public/5.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+                                  className="relative min-h-[250px] sm:min-h-[300px] lg:min-h-[420px] overflow-hidden"
+                                  style={{ backgroundImage: 'url(./../../public/5.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
                                 >
                                   <div className="absolute inset-0 bg-black/40" />
-                                  <div className="relative z-10 p-6 lg:p-10">
-                                    <div className="text-3xl font-extrabold text-white">Таиланд</div>
-                                    <div className="mt-2 text-pink-200 font-medium">25 ноября — 9 декабря</div>
+                                  <div className="relative z-10 p-4 sm:p-6 lg:p-10 h-full flex flex-col justify-end">
+                                    <div className="text-2xl sm:text-3xl font-extrabold text-white">Таиланд</div>
+                                    <div className="mt-2 text-pink-200 font-medium text-sm sm:text-base">25 ноября — 9 декабря</div>
                                   </div>
                                 </div>
-                                <div className="p-6 lg:p-10 text-pink-100 space-y-3">
-                                  <p>
+                                <div className="p-4 sm:p-6 lg:p-10 text-pink-100 space-y-2 sm:space-y-3">
+                                  <p className="text-sm sm:text-base">
                                     Нас ждёт путешествие мечты! Море, солнце, закаты и длинные разговоры под шум волн.
                                     Мы подготовили всё — готовые путёвки, комфортное совместное проживание, насыщенную программу и время для отдыха.
                                   </p>
                                   <div>
-                                    <p className="m-0 text-pink-200 font-semibold">Что будет:</p>
-                                    <ul className="list-disc list-inside space-y-1">
+                                    <p className="m-0 text-pink-200 font-semibold text-sm sm:text-base">Что будет:</p>
+                                    <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm">
                                       <li>фотосессии на пляже и в красивых локациях;</li>
                                       <li>экскурсии и совместные активности;</li>
                                       <li>женские разговоры по душам и вдохновляющие вечера;</li>
@@ -565,7 +565,7 @@ const BenefitsSection: React.FC = () => {
                                     </ul>
                                   </div>
                                   <div className="pt-2">
-                                    <button onClick={() => window.dispatchEvent(new Event('open-join-modal'))} className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg">
+                                    <button onClick={() => window.dispatchEvent(new Event('open-join-modal'))} className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg text-sm sm:text-base">
                                       Подать заявку
                                     </button>
                                   </div>
@@ -576,10 +576,10 @@ const BenefitsSection: React.FC = () => {
                               {showTourArrows && (
                               <button
                                 aria-label="Next tours"
-                                className="hidden md:flex items-center justify-center absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm"
+                                className="hidden md:flex items-center justify-center absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm"
                                 onClick={() => handleToursScroll('next')}
                               >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="9 18 15 12 9 6"></polyline></svg>
                               </button>
                               )}
                             </div>
@@ -676,13 +676,13 @@ const BenefitsSection: React.FC = () => {
       })}
       
       {/* Итоговый CTA-блок (заменён на крупный вопрос) */}
-      <section className="py-24 bg-gradient-to-r from-pink-900/30 to-purple-900/30">
+      <section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-r from-pink-900/30 to-purple-900/30">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold uppercase tracking-wide text-white">
+          <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold uppercase tracking-wide text-white leading-tight">
             ГОТОВА НАЙТИ ПОДРУГ ПО ВСЕЙ СТРАНЕ?
           </div>
-          <div className="mt-6 flex items-center justify-center">
-            <button onClick={() => window.dispatchEvent(new Event('open-join-modal'))} className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-10 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg">
+          <div className="mt-4 sm:mt-6 flex items-center justify-center">
+            <button onClick={() => window.dispatchEvent(new Event('open-join-modal'))} className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-8 sm:px-10 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg text-base sm:text-lg">
               Вступить
           </button>
           </div>

@@ -62,7 +62,7 @@ class SendConsultationSms implements ShouldQueue
     }
 
     /**
-     * Отправка SMS через API
+     * Отправка SMS через API SMS.ru
      */
     private function sendSms(string $message): void
     {
@@ -78,21 +78,129 @@ class SendConsultationSms implements ShouldQueue
             return;
         }
 
-        $response = Http::timeout(10)->post(env('SMS_PROVIDER_URL', 'https://api.sms.ru/sms/send'), [
-            'api_id' => $apiKey,
-            'to' => $phoneNumber,
-            'msg' => $message,
-            'json' => 1
-        ]);
-
-        if (!$response->successful()) {
-            throw new \Exception('SMS API вернул ошибку: ' . $response->body());
-        }
-
-        $result = $response->json();
+        // Форматируем номер телефона (убираем все кроме цифр, начинаем с 7 или 8)
+        $phoneNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
         
-        if (isset($result['status']) && $result['status'] !== 'OK') {
-            throw new \Exception('SMS не отправлено: ' . ($result['status_text'] ?? 'Неизвестная ошибка'));
+        // Если номер начинается с 8, заменяем на 7
+        if (strlen($phoneNumber) >= 10 && $phoneNumber[0] == '8') {
+            $phoneNumber = '7' . substr($phoneNumber, 1);
+        }
+        
+        // Если номер не начинается с 7, добавляем 7
+        if (strlen($phoneNumber) == 10 && $phoneNumber[0] != '7') {
+            $phoneNumber = '7' . $phoneNumber;
+        }
+        
+        // Валидация формата номера (должен быть 11 цифр, начинаться с 7)
+        if (strlen($phoneNumber) != 11 || $phoneNumber[0] != '7') {
+            throw new \Exception('Неверный формат номера телефона. Должен быть в формате: 79243513155');
+        }
+        
+        // SMS.ru API URL
+        $apiUrl = env('SMS_PROVIDER_URL', 'https://sms.ru/sms/send');
+        
+        // Буквенный отправитель (если настроен)
+        $from = env('SMS_FROM', null);
+        
+        try {
+            $params = [
+                'api_id' => $apiKey,
+                'to' => $phoneNumber,
+                'msg' => $message,
+                'json' => 1
+            ];
+            
+            // Добавляем отправителя, если он настроен
+            if ($from) {
+                $params['from'] = $from;
+            }
+            
+            $response = Http::timeout(15)
+                ->asForm()
+                ->post($apiUrl, $params);
+
+            if (!$response->successful()) {
+                throw new \Exception('SMS API вернул HTTP ошибку: ' . $response->status() . ' - ' . $response->body());
+            }
+
+            $rawBody = $response->body();
+            $result = $response->json();
+            
+            // Логируем сырой ответ для отладки
+            Log::info('SMS.ru API Response', [
+                'raw_body' => $rawBody,
+                'parsed_json' => $result,
+                'status_code' => $response->status()
+            ]);
+            
+            // Проверяем статус ответа от SMS.ru
+            if (!isset($result['status'])) {
+                Log::error('Неверный формат ответа от SMS.ru API', [
+                    'raw_body' => $rawBody,
+                    'parsed_json' => $result,
+                    'is_array' => is_array($result)
+                ]);
+                throw new \Exception('Неверный формат ответа от SMS.ru API. Ответ: ' . substr($rawBody, 0, 500));
+            }
+            
+            // SMS.ru возвращает статус "OK" при успехе и код статуса 100
+            if ($result['status'] === 'OK') {
+                $statusCode = $result['status_code'] ?? null;
+                
+                // Проверяем статус отправки для конкретного номера
+                if (isset($result['sms'][$phoneNumber])) {
+                    $smsStatus = $result['sms'][$phoneNumber];
+                    
+                    // Проверяем успешность отправки для конкретного номера
+                    if ($smsStatus['status'] === 'OK' && $smsStatus['status_code'] == 100) {
+                        Log::info('SMS успешно отправлено через SMS.ru', [
+                            'to' => $phoneNumber,
+                            'sms_id' => $smsStatus['sms_id'] ?? null,
+                            'status_code' => $smsStatus['status_code'],
+                            'balance' => $result['balance'] ?? null
+                        ]);
+                        return;
+                    } elseif ($smsStatus['status'] === 'ERROR' || $smsStatus['status_code'] != 100) {
+                        // Ошибка при отправке на конкретный номер
+                        $errorText = $smsStatus['status_text'] ?? 'Неизвестная ошибка';
+                        $errorCode = $smsStatus['status_code'] ?? 'unknown';
+                        
+                        Log::error('SMS.ru вернул ошибку для номера', [
+                            'phone' => $phoneNumber,
+                            'error_code' => $errorCode,
+                            'error_text' => $errorText
+                        ]);
+                        
+                        throw new \Exception("SMS.ru вернул ошибку: {$errorText} (код: {$errorCode})");
+                    }
+                }
+                
+                // Если статус OK, но нет детальной информации по номеру
+                if ($statusCode == 100) {
+                    Log::info('SMS успешно отправлено через SMS.ru (без детальной информации)', [
+                        'to' => $phoneNumber,
+                        'status_code' => $statusCode,
+                        'balance' => $result['balance'] ?? null
+                    ]);
+                    return;
+                }
+            }
+            
+            // Обработка ошибок от SMS.ru
+            $errorMessage = $result['status_text'] ?? 'Неизвестная ошибка';
+            $errorCode = $result['status_code'] ?? 'unknown';
+            
+            throw new \Exception("SMS.ru вернул ошибку: {$errorMessage} (код: {$errorCode})");
+            
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \Exception('Ошибка подключения к SMS.ru API: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('Ошибка отправки SMS через SMS.ru', [
+                'error' => $e->getMessage(),
+                'phone' => $phoneNumber,
+                'api_url' => $apiUrl
+            ]);
+            throw $e;
         }
     }
 

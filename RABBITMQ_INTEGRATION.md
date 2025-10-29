@@ -20,7 +20,7 @@ RABBITMQ_VHOST=/
 
 # SMS Configuration
 SMS_PHONE_NUMBER=89243513155
-SMS_PROVIDER_URL=https://api.sms.ru/sms/send
+SMS_PROVIDER_URL=https://sms.ru/sms/send
 SMS_API_KEY=your-sms-api-key-here
 
 # Queue Configuration
@@ -28,14 +28,31 @@ QUEUE_CONNECTION=rabbitmq
 ```
 
 ### 3. Запуск воркера очередей
+
+**Интерактивный режим (для разработки):**
 ```bash
 ./start-queue-worker.sh
 ```
 
-### 4. Проверка работы
+**Фоновый режим (для production):**
+```bash
+./start-queue-worker-daemon.sh
+```
+
+### 4. Тестирование системы
+```bash
+./test-sms-system.sh
+```
+
+### 5. Проверка работы
 - Откройте форму регистрации
 - Нажмите "Получить консультацию"
 - Проверьте логи воркера и RabbitMQ Management UI (http://localhost:15672)
+
+### 6. Проверка статуса очереди
+```bash
+docker exec php-fpm-gross php artisan queue:status
+```
 
 ## 📱 Как это работает
 

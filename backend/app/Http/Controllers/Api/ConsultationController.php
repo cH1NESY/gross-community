@@ -31,18 +31,38 @@ class ConsultationController extends Controller
         }
 
         try {
-            // Отправляем SMS уведомление в очередь
-            SendConsultationSms::dispatch(
-                $request->input('full_name'),
-                $request->input('phone'),
-                $request->input('email')
-            );
-
-            Log::info('Заявка на консультацию отправлена в очередь', [
-                'user_name' => $request->input('full_name'),
-                'user_phone' => $request->input('phone'),
-                'user_email' => $request->input('email')
-            ]);
+            // Отправляем SMS уведомление в очередь RabbitMQ
+            // Если очередь недоступна, отправляем синхронно
+            try {
+                SendConsultationSms::dispatch(
+                    $request->input('full_name'),
+                    $request->input('phone'),
+                    $request->input('email')
+                )->onConnection('rabbitmq')->onQueue('default');
+                
+                Log::info('Заявка на консультацию отправлена в очередь RabbitMQ', [
+                    'user_name' => $request->input('full_name'),
+                    'user_phone' => $request->input('phone'),
+                    'user_email' => $request->input('email')
+                ]);
+            } catch (\Exception $queueException) {
+                // Если очередь недоступна, отправляем синхронно
+                Log::warning('Очередь RabbitMQ недоступна, отправка синхронно', [
+                    'error' => $queueException->getMessage()
+                ]);
+                
+                SendConsultationSms::dispatchSync(
+                    $request->input('full_name'),
+                    $request->input('phone'),
+                    $request->input('email')
+                );
+                
+                Log::info('Заявка на консультацию отправлена синхронно', [
+                    'user_name' => $request->input('full_name'),
+                    'user_phone' => $request->input('phone'),
+                    'user_email' => $request->input('email')
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

@@ -7,4 +7,9 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  server: {
+    allowedHosts: ['.lhr.life', '.ngrok.io', '.localhost.run', '.serveo.net'],
+    host: '0.0.0.0',
+    port: 5173
+  }
 });

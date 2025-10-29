@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Скрипт для запуска воркера очередей Laravel с RabbitMQ
+# Запускайте в отдельном терминале для постоянной работы
 
 echo "🚀 Запуск воркера очередей Laravel..."
 
@@ -17,9 +18,10 @@ if ! docker ps | grep -q "rabbitmq-gross"; then
 fi
 
 echo "✅ Все контейнеры запущены"
+echo ""
+echo "📋 Воркер будет обрабатывать задачи из очереди RabbitMQ"
+echo "🛑 Для остановки нажмите Ctrl+C"
+echo ""
 
-# Запускаем воркер очередей
-echo "🔄 Запуск воркера очередей..."
-docker exec -it php-fpm-gross php artisan queue:work rabbitmq --verbose --tries=3 --timeout=30
-
-echo "✅ Воркер очередей остановлен"
+# Запускаем воркер в интерактивном режиме
+docker exec -it php-fpm-gross php artisan queue:work rabbitmq --verbose --tries=3 --timeout=30 --sleep=3
