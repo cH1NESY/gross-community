@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../utils/apiBase';
 
 interface User {
   id: number;
@@ -72,6 +73,42 @@ interface PaymentMethod {
 }
 
 const Account: React.FC = () => {
+  const DEFAULT_METHODS: Record<string, PaymentMethod> = {
+    card: {
+      name: 'Банковская карта',
+      description: 'Вывод на банковскую карту',
+      fields: {
+        card_number: 'Номер карты',
+        cardholder_name: 'Имя держателя карты',
+        bank: 'Банк',
+      },
+    },
+    bank_account: {
+      name: 'Банковский счет',
+      description: 'Вывод на банковский счет',
+      fields: {
+        account_number: 'Номер счета',
+        bank_name: 'Название банка',
+        bik: 'БИК',
+      },
+    },
+    qiwi: {
+      name: 'QIWI Кошелек',
+      description: 'Вывод на QIWI кошелек',
+      fields: {
+        phone: 'Номер телефона',
+        wallet_id: 'ID кошелька',
+      },
+    },
+    yoomoney: {
+      name: 'ЮMoney',
+      description: 'Вывод на ЮMoney кошелек',
+      fields: {
+        wallet_number: 'Номер кошелька',
+        phone: 'Номер телефона',
+      },
+    },
+  };
   const [active, setActive] = useState<'profile' | 'terms' | 'referrals' | 'rewards' | 'payout'>('profile');
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,8 +124,9 @@ const Account: React.FC = () => {
   
   // Данные для выводов
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<Record<string, PaymentMethod>>({});
+  const [paymentMethods, setPaymentMethods] = useState<Record<string, PaymentMethod>>(DEFAULT_METHODS);
   const [withdrawalsLoading, setWithdrawalsLoading] = useState(false);
+  // DEFAULT_METHODS перенесён выше, чтобы использовать его в инициализации состояний
   
   // Форма для вывода средств
   const [withdrawalForm, setWithdrawalForm] = useState({
@@ -97,6 +135,7 @@ const Account: React.FC = () => {
     payment_details: {} as Record<string, string>,
   });
   const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
+  const [withdrawalSuccessMsg, setWithdrawalSuccessMsg] = useState<string | null>(null);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('api_token');
@@ -114,7 +153,7 @@ const Account: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost/api/user', {
+      const response = await fetch(apiUrl('/user'), {
         headers: getAuthHeaders(),
       });
       const data = await response.json();
@@ -129,7 +168,7 @@ const Account: React.FC = () => {
   const loadReferrals = async () => {
     setReferralsLoading(true);
     try {
-      const response = await fetch('http://localhost/api/referrals', {
+      const response = await fetch(apiUrl('/referrals'), {
         headers: getAuthHeaders(),
       });
       const data = await response.json();
@@ -146,16 +185,42 @@ const Account: React.FC = () => {
   const loadEarnings = async () => {
     setEarningsLoading(true);
     try {
-      const response = await fetch('http://localhost/api/earnings', {
-        headers: getAuthHeaders(),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setEarnings(data.data);
-        setBalance(data.balance);
+      const response = await fetch(apiUrl('/earnings'), { headers: getAuthHeaders() });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        console.error('Earnings request failed', response.status, text);
+        setEarnings({ referral: [], bonus: [], manual: [] });
+        return;
+      }
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.error('Earnings JSON parse error:', e);
+        setEarnings({ referral: [], bonus: [], manual: [] });
+        return;
+      }
+      if (data && data.success) {
+        const safeData: EarningsData = {
+          referral: Array.isArray(data.data?.referral) ? data.data.referral : [],
+          bonus: Array.isArray(data.data?.bonus) ? data.data.bonus : [],
+          manual: Array.isArray(data.data?.manual) ? data.data.manual : [],
+        };
+        setEarnings(safeData);
+        if (data.balance) {
+          setBalance({
+            total_earned: Number(data.balance.total_earned || 0),
+            available_balance: Number(data.balance.available_balance || 0),
+            pending_balance: Number(data.balance.pending_balance || 0),
+            withdrawn_total: Number(data.balance.withdrawn_total || 0),
+          });
+        }
+      } else {
+        setEarnings({ referral: [], bonus: [], manual: [] });
       }
     } catch (error) {
       console.error('Error fetching earnings:', error);
+      setEarnings({ referral: [], bonus: [], manual: [] });
     } finally {
       setEarningsLoading(false);
     }
@@ -165,10 +230,10 @@ const Account: React.FC = () => {
     setWithdrawalsLoading(true);
     try {
       const [withdrawalsResponse, methodsResponse] = await Promise.all([
-        fetch('http://localhost/api/withdrawals', {
+        fetch(apiUrl('/withdrawals'), {
           headers: getAuthHeaders(),
         }),
-        fetch('http://localhost/api/withdrawals/payment-methods', {
+        fetch(apiUrl('/withdrawals/payment-methods'), {
           headers: getAuthHeaders(),
         })
       ]);
@@ -181,11 +246,14 @@ const Account: React.FC = () => {
         setBalance(withdrawalsData.balance);
       }
 
-      if (methodsData.success) {
+      if (methodsData.success && methodsData.data && Object.keys(methodsData.data).length > 0) {
         setPaymentMethods(methodsData.data);
+      } else {
+        setPaymentMethods(DEFAULT_METHODS);
       }
     } catch (error) {
       console.error('Error fetching withdrawals:', error);
+      setPaymentMethods(DEFAULT_METHODS);
     } finally {
       setWithdrawalsLoading(false);
     }
@@ -196,7 +264,7 @@ const Account: React.FC = () => {
     setSubmittingWithdrawal(true);
 
     try {
-      const response = await fetch('http://localhost/api/withdrawals', {
+      const response = await fetch(apiUrl('/withdrawals'), {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(withdrawalForm),
@@ -205,7 +273,7 @@ const Account: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        alert('Заявка на вывод средств создана успешно!');
+        setWithdrawalSuccessMsg('Заявка на вывод средств выполнена. Средства списаны.');
         setWithdrawalForm({ amount: '', payment_method: '', payment_details: {} });
         loadWithdrawals(); // Перезагружаем данные
       } else {
@@ -403,19 +471,19 @@ const Account: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white/5 rounded-lg p-4">
                   <h3 className="text-sm text-pink-200 mb-1">Общий доход</h3>
-                  <p className="text-lg font-semibold">{balance.total_earned.toLocaleString()} ₽</p>
+                  <p className="text-lg font-semibold">{(balance?.total_earned ?? 0).toLocaleString()} ₽</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
                   <h3 className="text-sm text-pink-200 mb-1">Доступно</h3>
-                  <p className="text-lg font-semibold text-green-400">{balance.available_balance.toLocaleString()} ₽</p>
+                  <p className="text-lg font-semibold text-green-400">{(balance?.available_balance ?? 0).toLocaleString()} ₽</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
                   <h3 className="text-sm text-pink-200 mb-1">Ожидает</h3>
-                  <p className="text-lg font-semibold text-yellow-400">{balance.pending_balance.toLocaleString()} ₽</p>
+                  <p className="text-lg font-semibold text-yellow-400">{(balance?.pending_balance ?? 0).toLocaleString()} ₽</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
                   <h3 className="text-sm text-pink-200 mb-1">Выведено</h3>
-                  <p className="text-lg font-semibold">{balance.withdrawn_total.toLocaleString()} ₽</p>
+                  <p className="text-lg font-semibold">{(balance?.withdrawn_total ?? 0).toLocaleString()} ₽</p>
                 </div>
               </div>
             )}
@@ -425,7 +493,7 @@ const Account: React.FC = () => {
             ) : earnings ? (
               <div className="space-y-6">
                 {/* Реферальные начисления */}
-                {earnings.referral.length > 0 && (
+                {(earnings.referral?.length ?? 0) > 0 && (
                   <div>
                     <h3 className="text-lg font-semibold mb-3">Реферальные начисления</h3>
                     <div className="overflow-x-auto">
@@ -439,11 +507,11 @@ const Account: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {earnings.referral.map((earning) => (
+                          {earnings.referral!.map((earning) => (
                             <tr key={earning.id} className="border-b border-white/5">
                               <td className="py-2 pr-4">{earning.created_at}</td>
                               <td className="py-2 pr-4">{earning.description}</td>
-                              <td className="py-2 pr-4">{earning.amount.toLocaleString()} ₽</td>
+                              <td className="py-2 pr-4">{Number(earning.amount ?? 0).toLocaleString()} ₽</td>
                               <td className="py-2 pr-4">
                                 <span className={`px-2 py-1 rounded text-xs ${
                                   earning.status === 'approved' ? 'bg-green-500/20 text-green-400' :
@@ -461,84 +529,7 @@ const Account: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {/* Бонусные начисления */}
-                {earnings.bonus.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">Бонусные начисления</h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-pink-200 border-b border-white/10">
-                            <th className="py-2 pr-4">Дата</th>
-                            <th className="py-2 pr-4">Описание</th>
-                            <th className="py-2 pr-4">Сумма</th>
-                            <th className="py-2 pr-4">Статус</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {earnings.bonus.map((earning) => (
-                            <tr key={earning.id} className="border-b border-white/5">
-                              <td className="py-2 pr-4">{earning.created_at}</td>
-                              <td className="py-2 pr-4">{earning.description}</td>
-                              <td className="py-2 pr-4">{earning.amount.toLocaleString()} ₽</td>
-                              <td className="py-2 pr-4">
-                                <span className={`px-2 py-1 rounded text-xs ${
-                                  earning.status === 'approved' ? 'bg-green-500/20 text-green-400' :
-                                  earning.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  'bg-red-500/20 text-red-400'
-                                }`}>
-                                  {earning.status === 'approved' ? 'Одобрено' :
-                                   earning.status === 'pending' ? 'Ожидает' : 'Отклонено'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Ручные начисления */}
-                {earnings.manual.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">Ручные начисления</h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-pink-200 border-b border-white/10">
-                            <th className="py-2 pr-4">Дата</th>
-                            <th className="py-2 pr-4">Описание</th>
-                            <th className="py-2 pr-4">Сумма</th>
-                            <th className="py-2 pr-4">Статус</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {earnings.manual.map((earning) => (
-                            <tr key={earning.id} className="border-b border-white/5">
-                              <td className="py-2 pr-4">{earning.created_at}</td>
-                              <td className="py-2 pr-4">{earning.description}</td>
-                              <td className="py-2 pr-4">{earning.amount.toLocaleString()} ₽</td>
-                              <td className="py-2 pr-4">
-                                <span className={`px-2 py-1 rounded text-xs ${
-                                  earning.status === 'approved' ? 'bg-green-500/20 text-green-400' :
-                                  earning.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  'bg-red-500/20 text-red-400'
-                                }`}>
-                                  {earning.status === 'approved' ? 'Одобрено' :
-                                   earning.status === 'pending' ? 'Ожидает' : 'Отклонено'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {earnings.referral.length === 0 && earnings.bonus.length === 0 && earnings.manual.length === 0 && (
+                {(earnings.referral?.length ?? 0) === 0 && (
                   <p className="text-pink-100 text-sm">Начислений пока нет</p>
                 )}
               </div>
@@ -551,6 +542,11 @@ const Account: React.FC = () => {
         {active === 'payout' && (
           <div className="mt-8 rounded-2xl border border-pink-500/20 bg-black/30 p-6 max-w-3xl">
             <h2 className="text-xl font-semibold mb-4">Вывод денежных средств</h2>
+            {withdrawalSuccessMsg && (
+              <div className="mb-4 rounded-lg border border-green-500/30 bg-green-900/30 text-green-200 px-4 py-3">
+                {withdrawalSuccessMsg}
+              </div>
+            )}
             
             {balance && (
               <div className="bg-white/5 rounded-lg p-4 mb-6">
@@ -590,7 +586,7 @@ const Account: React.FC = () => {
                       {withdrawals.map((withdrawal) => (
                         <tr key={withdrawal.id} className="border-b border-white/5">
                           <td className="py-2 pr-4">{withdrawal.created_at}</td>
-                          <td className="py-2 pr-4">{withdrawal.amount.toLocaleString()} ₽</td>
+                          <td className="py-2 pr-4">{Number(withdrawal.amount ?? 0).toLocaleString()} ₽</td>
                           <td className="py-2 pr-4">
                             {paymentMethods[withdrawal.payment_method]?.name || withdrawal.payment_method}
                           </td>

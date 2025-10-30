@@ -40,4 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('/payments', [PaymentController::class, 'create']);
 Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
 
+// Админ-операции по выводам (по заголовку X-Admin-Token)
+Route::post('/withdrawals/{id}/approve', [WithdrawalController::class, 'approveWithdrawal']);
+Route::post('/withdrawals/{id}/reject', [WithdrawalController::class, 'rejectWithdrawal']);
+
 

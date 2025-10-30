@@ -3,6 +3,7 @@ import ThankYouModal from '../components/ThankYouModal';
 import PasswordSetupModal from '../components/PasswordSetupModal';
 import TelegramModal from '../components/TelegramModal';
 import { safeFetch, safeNavigate, safeHistoryReplace } from '../utils/safeAsync';
+import { apiUrl } from '../utils/apiBase';
 
 const Card: React.FC<{ title: string; value: string; note?: string }> = ({ title, value, note }) => (
   <div className="rounded-2xl p-6 bg-gradient-to-br from-gray-900/80 to-black/80 border border-pink-500/30 shadow-[0_10px_40px_-10px_rgba(236,72,153,0.4)]">
@@ -36,7 +37,7 @@ const Payment: React.FC = () => {
   }, []);
 
   const checkUserPasswordStatus = async () => {
-    const response = await safeFetch('http://localhost/api/user', {
+    const response = await safeFetch(apiUrl('/user'), {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('api_token')}`,
         'Accept': 'application/json'
@@ -68,7 +69,7 @@ const Payment: React.FC = () => {
   };
 
   const triggerPayment = async () => {
-    const response = await safeFetch('http://localhost/api/payments', {
+    const response = await safeFetch(apiUrl('/payments'), {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json', 

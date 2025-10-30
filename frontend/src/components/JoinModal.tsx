@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiUrl } from '../utils/apiBase';
 import { X, ChevronDown } from 'lucide-react';
 import { FormData } from '../App';
 import TelegramModal from './TelegramModal';
@@ -90,7 +91,7 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
         referral_link: formData.referralLink,
       };
 
-      const response = await fetch('http://localhost/api/register', {
+      const response = await fetch(apiUrl('/register'), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -8,6 +8,7 @@ use App\Models\Withdrawal;
 use App\Models\UserBalance;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class WithdrawalController extends Controller
 {
@@ -71,13 +72,7 @@ class WithdrawalController extends Controller
             ], 422);
         }
 
-        // Проверяем, можно ли создать новую заявку
-        if (!Withdrawal::canCreateWithdrawal($user->id)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'У вас уже есть активная заявка на вывод средств',
-            ], 400);
-        }
+        // Раньше блокировали, если была активная заявка. Теперь разрешаем — заявки завершаются автоматически.
 
         // Получаем баланс пользователя
         $balance = UserBalance::getOrCreateBalance($user->id);
@@ -91,24 +86,39 @@ class WithdrawalController extends Controller
             ], 400);
         }
 
-        // Создаем заявку
+        // Создаем заявку и сразу завершаем (без админ-подтверждения)
         $withdrawal = Withdrawal::create([
             'user_id' => $user->id,
             'amount' => $request->amount,
             'payment_method' => $request->payment_method,
             'payment_details' => $request->payment_details,
-            'status' => 'pending',
+            'status' => 'completed',
+            'processed_at' => now(),
+        ]);
+
+        // Моментально корректируем баланс
+        $balance->available_balance = $balance->available_balance - $withdrawal->amount;
+        if ($balance->available_balance < 0) {
+            $balance->available_balance = 0; // страховка
+        }
+        $balance->withdrawn_total = $balance->withdrawn_total + $withdrawal->amount;
+        $balance->save();
+
+        Log::info('Withdrawal auto-completed', [
+            'withdrawal_id' => $withdrawal->id,
+            'user_id' => $user->id,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Заявка на вывод средств создана успешно',
+            'message' => 'Заявка на вывод средств выполнена',
             'data' => [
                 'id' => $withdrawal->id,
                 'amount' => $withdrawal->amount,
                 'payment_method' => $withdrawal->payment_method,
                 'status' => $withdrawal->status,
                 'created_at' => $withdrawal->created_at->format('d.m.Y H:i'),
+                'processed_at' => $withdrawal->processed_at->format('d.m.Y H:i'),
             ],
         ]);
     }
@@ -159,5 +169,84 @@ class WithdrawalController extends Controller
             'success' => true,
             'data' => $methods,
         ]);
+    }
+
+    /**
+     * Подтвердить (одобрить) заявку на вывод средств [ADMIN]
+     * Требует заголовок X-Admin-Token, совпадающий с env('ADMIN_API_TOKEN')
+     */
+    public function approveWithdrawal(Request $request, int $id)
+    {
+        if ($request->header('X-Admin-Token') !== env('ADMIN_API_TOKEN')) {
+            return response()->json(['success' => false, 'message' => 'Доступ запрещен'], 403);
+        }
+
+        $withdrawal = Withdrawal::find($id);
+        if (!$withdrawal) {
+            return response()->json(['success' => false, 'message' => 'Заявка не найдена'], 404);
+        }
+        if ($withdrawal->status !== 'pending' && $withdrawal->status !== 'processing') {
+            return response()->json(['success' => false, 'message' => 'Неверный статус заявки'], 400);
+        }
+
+        $balance = UserBalance::getOrCreateBalance($withdrawal->user_id);
+
+        // Финализация вывода: списываем доступный баланс и увеличиваем withdrawn_total,
+        // если ещё не резервировали. Если резерва не было, проверим достаточно ли средств.
+        if ($withdrawal->status === 'pending') {
+            if ($withdrawal->amount > $balance->available_balance) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Недостаточно средств на балансе для одобрения',
+                ], 400);
+            }
+            $balance->available_balance = $balance->available_balance - $withdrawal->amount;
+        }
+        $balance->withdrawn_total = $balance->withdrawn_total + $withdrawal->amount;
+        $balance->save();
+
+        $withdrawal->status = 'completed';
+        $withdrawal->processed_at = now();
+        $withdrawal->rejection_reason = null;
+        $withdrawal->save();
+
+        Log::info('Withdrawal approved', ['withdrawal_id' => $withdrawal->id]);
+
+        return response()->json(['success' => true, 'message' => 'Заявка одобрена']);
+    }
+
+    /**
+     * Отклонить заявку на вывод средств [ADMIN]
+     */
+    public function rejectWithdrawal(Request $request, int $id)
+    {
+        if ($request->header('X-Admin-Token') !== env('ADMIN_API_TOKEN')) {
+            return response()->json(['success' => false, 'message' => 'Доступ запрещен'], 403);
+        }
+
+        $withdrawal = Withdrawal::find($id);
+        if (!$withdrawal) {
+            return response()->json(['success' => false, 'message' => 'Заявка не найдена'], 404);
+        }
+        if ($withdrawal->status !== 'pending' && $withdrawal->status !== 'processing') {
+            return response()->json(['success' => false, 'message' => 'Неверный статус заявки'], 400);
+        }
+
+        $reason = $request->input('reason');
+
+        $withdrawal->status = 'rejected';
+        $withdrawal->processed_at = now();
+        $withdrawal->rejection_reason = $reason;
+        $withdrawal->save();
+
+        // Возврат денег: если хотим, можно возвращать в available_balance, но чаще это делается вручную.
+        // Вернём сумму в доступный баланс, если она была зарезервирована логикой выше на стороне бизнеса.
+        $balance = UserBalance::getOrCreateBalance($withdrawal->user_id);
+        $balance->available_balance = $balance->available_balance + $withdrawal->amount;
+        $balance->save();
+
+        Log::info('Withdrawal rejected', ['withdrawal_id' => $withdrawal->id]);
+
+        return response()->json(['success' => true, 'message' => 'Заявка отклонена']);
     }
 }

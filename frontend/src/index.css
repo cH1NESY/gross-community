@@ -41,4 +41,10 @@
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .fade-in-up { animation: fadeInUp 200ms ease-out both; }
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Видимость текста пунктов выпадающих списков в тёмной теме */
+  select option { color: #111827; background-color: #ffffff; }
+  @media (prefers-color-scheme: dark) {
+    select option { color: #e5e7eb; background-color: #111827; }
+  }
 }

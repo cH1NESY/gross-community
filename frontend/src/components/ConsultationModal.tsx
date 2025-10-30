@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Phone, Loader } from 'lucide-react';
 import { safeFetch } from '../utils/safeAsync';
+import { apiUrl } from '../utils/apiBase';
 
 interface ConsultationModalProps {
   onClose: () => void;
@@ -26,7 +27,7 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, userData
     setError(null);
 
     try {
-      const response = await safeFetch('http://localhost/api/consultation', {
+      const response = await safeFetch(apiUrl('/consultation'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiUrl } from '../utils/apiBase';
 import { X, Eye, EyeOff } from 'lucide-react';
 import TelegramModal from './TelegramModal';
 
@@ -44,7 +45,7 @@ const PasswordSetupModal: React.FC<PasswordSetupModalProps> = ({ onClose, userId
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
 
-      const response = await fetch('http://localhost/api/setup-password', {
+      const response = await fetch(apiUrl('/setup-password'), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

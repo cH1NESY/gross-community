@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../utils/apiBase';
 import { Menu, X } from 'lucide-react';
 
 interface User {
@@ -22,7 +23,7 @@ const Header: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('api_token');
     if (token) {
-      fetch('http://localhost/api/user', {
+      fetch(apiUrl('/user'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

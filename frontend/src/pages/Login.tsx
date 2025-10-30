@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { apiUrl } from '../utils/apiBase';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +19,7 @@ const Login: React.FC = () => {
       return;
     }
     try {
-      const res = await fetch('http://localhost/api/login', {
+      const res = await fetch(apiUrl('/login'), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -26,6 +28,10 @@ const Login: React.FC = () => {
         body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
+        if (res.status === 401) {
+          setError('Неправильный логин или пароль');
+          return;
+        }
         const err = await res.json().catch(() => ({}));
         setError(err?.message || 'Ошибка входа');
         return;
@@ -58,13 +64,23 @@ const Login: React.FC = () => {
         />
 
         <label className="block text-sm font-medium text-white mb-2">Пароль</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-4 px-4 py-3 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none"
-          placeholder="••••••"
-        />
+        <div className="relative mb-4">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 pr-12 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none"
+            placeholder="••••••"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-300 hover:text-white"
+            aria-label="Показать пароль"
+          >
+            {showPassword ? 'Скрыть' : 'Показать'}
+          </button>
+        </div>
 
         {error && <div className="text-red-400 text-sm mb-3">{error}</div>}
 
