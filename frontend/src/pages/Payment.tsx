@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ThankYouModal from '../components/ThankYouModal';
 import PasswordSetupModal from '../components/PasswordSetupModal';
 import TelegramModal from '../components/TelegramModal';
@@ -19,6 +19,8 @@ const Payment: React.FC = () => {
   const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
+  const isProcessingPaymentRef = useRef(false);
+  
   useEffect(() => {
     // Инициализируем правильный API base при загрузке (на случай редиректа с оплаты)
     import('../utils/apiBase').then(({ getApiBase }) => {
@@ -27,7 +29,10 @@ const Payment: React.FC = () => {
 
     // Проверяем, вернулся ли пользователь после оплаты
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === '1') {
+    const isSuccessReturn = urlParams.get('success') === '1';
+    
+    if (isSuccessReturn && !isProcessingPaymentRef.current) {
+      isProcessingPaymentRef.current = true;
       // Восстанавливаем правильный API base после редиректа
       const currentHost = window.location.hostname;
       // Если редирект был на localhost, но мы на сервере - исправляем
@@ -52,19 +57,34 @@ const Payment: React.FC = () => {
 
       // Проверяем наличие оплаченного платежа перед показом модала
       // Это гарантирует, что модал покажется даже если флаг уже был установлен
-      checkPaymentStatusAndShowModal().then(() => {
+      // Не ждем завершения, чтобы страница загрузилась сразу
+      checkPaymentStatusAndShowModal().catch(err => {
+        console.error('Error checking payment status:', err);
+        // При любой ошибке показываем модал для ввода пароля
+        setShowPasswordSetup(true);
+      }).finally(() => {
         // Убираем параметр из URL, сохраняя hash для правильного роутинга
-        const newUrl = window.location.pathname + window.location.hash;
-        safeHistoryReplace(newUrl);
+        try {
+          const newUrl = window.location.pathname + (window.location.hash || '#/payment');
+          safeHistoryReplace(newUrl);
+        } catch (e) {
+          console.error('Error replacing URL:', e);
+        } finally {
+          isProcessingPaymentRef.current = false;
+        }
       });
     }
   }, []);
 
   // Проверяет статус оплаты и показывает соответствующий модал
-  const checkPaymentStatusAndShowModal = async () => {
+  const checkPaymentStatusAndShowModal = async (retryCount: number = 0) => {
+    const MAX_RETRIES = 3; // Максимум 3 попытки
+    
     const token = localStorage.getItem('api_token');
     if (!token) {
       console.error('No auth token found');
+      // Даже без токена показываем модал для ввода пароля
+      setShowPasswordSetup(true);
       return;
     }
 
@@ -81,8 +101,16 @@ const Payment: React.FC = () => {
     
     if (!userResponse || !userResponse.ok) {
       console.error('Failed to fetch user data:', userResponse?.status);
+      
+      // Если превышено количество попыток - показываем модал в любом случае
+      if (retryCount >= MAX_RETRIES) {
+        console.warn('Max retries reached, showing password setup modal anyway');
+        setShowPasswordSetup(true);
+        return;
+      }
+      
       // Повторяем попытку через секунду
-      setTimeout(() => checkPaymentStatusAndShowModal(), 1000);
+      setTimeout(() => checkPaymentStatusAndShowModal(retryCount + 1), 1000);
       return;
     }
 
@@ -143,6 +171,8 @@ const Payment: React.FC = () => {
     } catch (error) {
       console.error('Error parsing user data:', error);
       localStorage.removeItem('payment_success_shown');
+      // При ошибке парсинга показываем модал для ввода пароля
+      setShowPasswordSetup(true);
     }
   };
 
