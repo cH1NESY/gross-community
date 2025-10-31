@@ -20,9 +20,36 @@ const Payment: React.FC = () => {
   const [referralLink, setReferralLink] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
   useEffect(() => {
+    // Инициализируем правильный API base при загрузке (на случай редиректа с оплаты)
+    import('../utils/apiBase').then(({ getApiBase }) => {
+      getApiBase(); // Инициализируем и сохраняем в sessionStorage
+    });
+
     // Проверяем, вернулся ли пользователь после оплаты
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === '1') {
+      // Восстанавливаем правильный API base после редиректа
+      const currentHost = window.location.hostname;
+      // Если редирект был на localhost, но мы на сервере - исправляем
+      if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+        // Пытаемся определить правильный хост из sessionStorage
+        const savedBase = sessionStorage.getItem('api_base');
+        if (savedBase) {
+          try {
+            const savedHost = new URL(savedBase).hostname;
+            // Если сохраненный хост не localhost, значит мы на сервере
+            if (savedHost !== 'localhost' && savedHost !== '127.0.0.1') {
+              // Исправляем location на правильный
+              const correctUrl = savedBase + window.location.pathname + window.location.search + window.location.hash;
+              window.location.href = correctUrl;
+              return;
+            }
+          } catch (e) {
+            // Игнорируем ошибки парсинга
+          }
+        }
+      }
+
       // Проверяем, не показывали ли уже модал для этого пользователя
       const hasShownModal = localStorage.getItem('payment_success_shown');
       if (!hasShownModal) {
@@ -54,7 +81,10 @@ const Payment: React.FC = () => {
           setShowPasswordSetup(true);
         } else {
           // Если пароль уже есть, показываем Telegram модал
-          setReferralLink(userData.referral_link || `${window.location.origin}?ref=${userData.id}`);
+          // Определяем правильный origin (может быть изменен после редиректа)
+          const apiBase = (await import('../utils/apiBase')).getApiBase();
+          const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
+          setReferralLink(userData.referral_link || `${correctOrigin}?ref=${userData.id}`);
           setShowTelegramModal(true);
         }
       } catch (error) {

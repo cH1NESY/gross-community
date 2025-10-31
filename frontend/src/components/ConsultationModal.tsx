@@ -17,6 +17,21 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, userData
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Сброс состояния при открытии модалки или изменении userData
+  React.useEffect(() => {
+    setIsSuccess(false);
+    setError(null);
+    setIsLoading(false);
+  }, [userData]);
+
+  // Сброс состояния при закрытии через onClose
+  const handleClose = () => {
+    setIsSuccess(false);
+    setError(null);
+    setIsLoading(false);
+    onClose();
+  };
+
   const handleSubmit = async () => {
     if (!userData) {
       setError('Данные пользователя не найдены');
@@ -41,14 +56,34 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, userData
       }, 10000);
 
       if (response && response.ok) {
-        setIsSuccess(true);
+        const responseData = await response.json().catch(() => ({}));
+        if (responseData.success !== false) {
+          setIsSuccess(true);
+        } else {
+          setError(responseData.message || 'Произошла ошибка при отправке заявки');
+        }
       } else {
-        const errorData = await response?.json();
-        setError(errorData?.message || 'Произошла ошибка при отправке заявки');
+        // Пытаемся получить сообщение об ошибке
+        try {
+          const errorData = await response?.json().catch(() => ({}));
+          setError(errorData?.message || `Ошибка сервера (${response?.status || 'неизвестно'})`);
+        } catch (parseError) {
+          setError(response?.status === 500 
+            ? 'Ошибка сервера. Попробуйте позже.' 
+            : 'Произошла ошибка при отправке заявки');
+        }
       }
     } catch (err) {
       console.error('Consultation request error:', err);
-      setError('Ошибка сети. Проверьте подключение к интернету.');
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setError('Время ожидания истекло. Проверьте подключение к интернету.');
+        } else {
+          setError(`Ошибка сети: ${err.message}`);
+        }
+      } else {
+        setError('Ошибка сети. Проверьте подключение к интернету.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +100,7 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, userData
                 <h2 className="text-2xl font-bold text-white">Спасибо!</h2>
               </div>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="p-2 hover:bg-gray-700 rounded-full transition-colors duration-200"
               >
                 <X size={24} className="text-gray-300" />
@@ -95,7 +130,7 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, userData
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 w-full"
             >
               Понятно
@@ -116,7 +151,7 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, userData
               <h2 className="text-2xl font-bold text-white">Консультация</h2>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 hover:bg-gray-700 rounded-full transition-colors duration-200"
             >
               <X size={24} className="text-gray-300" />
@@ -162,7 +197,7 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, userData
 
           <div className="flex space-x-3">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
             >
               Отмена
