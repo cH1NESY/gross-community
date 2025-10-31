@@ -1,71 +1,65 @@
 export function getApiBase(): string {
-  // 1. Проверяем явно указанный в .env
+  // 1. Проверяем явно указанный в .env (приоритет)
   const envBase = (import.meta as any)?.env?.VITE_API_BASE?.trim();
   if (envBase) {
     const base = envBase.replace(/\/$/, '');
-    // Сохраняем в sessionStorage для использования после редиректов
+    console.log('[apiBase] Using VITE_API_BASE from .env:', base);
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('api_base', base);
     }
     return base;
   }
 
-  // 2. Пытаемся восстановить из sessionStorage (после редиректов с оплаты)
-  if (typeof window !== 'undefined') {
-    const savedBase = sessionStorage.getItem('api_base');
-    if (savedBase) {
-      // Проверяем что сохраненный URL валидный (не localhost если мы на сервере)
-      const currentHost = window.location.hostname;
-      const savedHost = new URL(savedBase).hostname;
-      
-      // Если сохраненный URL для того же домена/IP - используем его
-      if (savedHost === currentHost || savedHost === window.location.hostname) {
-        return savedBase;
-      }
-      
-      // Если мы на сервере (не localhost), а сохраненный localhost - не используем
-      if (savedHost === 'localhost' && currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
-        sessionStorage.removeItem('api_base');
-      } else {
-        return savedBase;
-      }
-    }
-  }
-
-  // 3. Определяем на основе текущего location
-  if (typeof window !== 'undefined' && window.location?.origin) {
+  // 2. Определяем на основе текущего location (главная логика)
+  if (typeof window !== 'undefined' && window.location?.hostname) {
     const hostname = window.location.hostname;
     const port = window.location.port;
     
-    // Если это localhost:5173 - бэкенд на localhost:80
-    if (port === '5173' && (hostname === 'localhost' || hostname === '127.0.0.1')) {
-      const base = 'http://localhost';
-      sessionStorage.setItem('api_base', base);
-      return base;
+    console.log('[apiBase] Current location:', { hostname, port, origin: window.location.origin });
+    
+    // Логика: фронтенд на IP:5173, бэкенд на том же IP:80
+    if (port === '5173') {
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // Локальная разработка
+        const base = 'http://localhost';
+        console.log('[apiBase] Local development, using:', base);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('api_base', base);
+        }
+        return base;
+      } else {
+        // Production: бэкенд на том же IP, но без порта (порт 80)
+        const base = `http://${hostname}`;
+        console.log('[apiBase] Production server, using:', base);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('api_base', base);
+        }
+        return base;
+      }
     }
     
-    // Если это production сервер (IP:5173) - бэкенд на том же IP без порта
-    if (port === '5173' && hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      const base = `http://${hostname}`;
-      sessionStorage.setItem('api_base', base);
-      return base;
-    }
-    
-    // Если есть порт и это не localhost - бэкенд на том же IP без порта
+    // Если есть другой порт и это не localhost - бэкенд на том же IP без порта
     if (port && hostname !== 'localhost' && hostname !== '127.0.0.1') {
       const base = `http://${hostname}`;
-      sessionStorage.setItem('api_base', base);
+      console.log('[apiBase] Other port, using:', base);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('api_base', base);
+      }
       return base;
     }
     
-    // Иначе используем текущий origin
+    // Если нет порта или localhost без порта - используем текущий origin
     const base = window.location.origin;
-    sessionStorage.setItem('api_base', base);
+    console.log('[apiBase] Using current origin:', base);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('api_base', base);
+    }
     return base;
   }
 
-  // 4. Last resort
+  // 3. Last resort - fallback
   const fallback = 'http://localhost';
+  console.warn('[apiBase] Using fallback:', fallback);
   if (typeof window !== 'undefined') {
     sessionStorage.setItem('api_base', fallback);
   }
