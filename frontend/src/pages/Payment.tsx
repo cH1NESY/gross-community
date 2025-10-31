@@ -30,8 +30,37 @@ const Payment: React.FC = () => {
     }
 
     // Проверяем, вернулся ли пользователь после оплаты
+    // В hash-based routing параметры могут быть в hash или в search
+    let isSuccessReturn = false;
+    
+    // Сначала проверяем search параметры (обычный способ)
     const urlParams = new URLSearchParams(window.location.search);
-    const isSuccessReturn = urlParams.get('success') === '1';
+    isSuccessReturn = urlParams.get('success') === '1';
+    
+    // Если не нашли в search, проверяем hash (для hash-based routing)
+    if (!isSuccessReturn && window.location.hash) {
+      const hashMatch = window.location.hash.match(/[?&]success=1/);
+      if (hashMatch) {
+        isSuccessReturn = true;
+        console.log('[Payment] Found success=1 in hash');
+      }
+    }
+    
+    // Также проверяем URL напрямую (на случай, если YooKassa вернул нестандартный формат)
+    if (!isSuccessReturn) {
+      const fullUrl = window.location.href;
+      if (fullUrl.includes('success=1')) {
+        isSuccessReturn = true;
+        console.log('[Payment] Found success=1 in full URL');
+      }
+    }
+    
+    console.log('[Payment] Payment return check:', {
+      search: window.location.search,
+      hash: window.location.hash,
+      href: window.location.href,
+      isSuccessReturn
+    });
     
     if (isSuccessReturn && !isProcessingPaymentRef.current) {
       isProcessingPaymentRef.current = true;
@@ -39,13 +68,17 @@ const Payment: React.FC = () => {
       // Сохраняем флаг возврата ДО очистки URL
       const shouldShowModal = true; // Всегда показываем при возврате с success=1
       
-      // Проверяем наличие оплаченного платежа перед показом модала
-      // Это гарантирует, что модал покажется даже если флаг уже был установлен
-      // Не ждем завершения, чтобы страница загрузилась сразу
+      // Показываем модалку сразу, не дожидаясь проверки API
+      // Это гарантирует, что пользователь всегда увидит форму пароля после оплаты
+      console.log('[Payment] Immediately showing password modal after payment return');
+      
+      // Показываем модалку немедленно, затем пытаемся получить данные пользователя для лучшего UX
+      setShowPasswordSetup(true);
+      
+      // Параллельно проверяем статус и обновляем данные, если получится
       checkPaymentStatusAndShowModal(shouldShowModal).catch(err => {
-        console.error('Error checking payment status:', err);
-        // При любой ошибке показываем модал для ввода пароля
-        setShowPasswordSetup(true);
+        console.error('[Payment] Error checking payment status:', err);
+        // Модалка уже показана выше, поэтому просто логируем ошибку
       }).finally(() => {
         // Убираем параметр из URL, сохраняя hash для правильного роутинга
         // Но делаем это с небольшой задержкой, чтобы проверка успела выполниться
@@ -111,24 +144,28 @@ const Payment: React.FC = () => {
       const userData = await userResponse.json();
       setUserId(userData.id);
 
-      // Если forceShow=true, значит мы вернулись с оплаты - показываем модал
+      // Если forceShow=true, значит мы вернулись с оплаты
       if (forceShow) {
-        console.log('Force show modal, userData:', { id: userData.id, has_password: userData.has_password });
+        console.log('[Payment] Force show modal, userData:', { id: userData.id, has_password: userData.has_password });
+        setUserId(userData.id); // Всегда устанавливаем userId
         
-        // Показываем форму создания пароля только если пароль еще не установлен
-        if (!userData.has_password) {
-          console.log('Showing password setup modal - no password');
-          setUserId(userData.id); // Устанавливаем userId перед показом модала
-          setShowPasswordSetup(true);
-        } else {
-          // Если пароль уже есть, показываем Telegram модал с реферальной ссылкой
-          console.log('Showing telegram modal - password exists');
+        // Если пароль уже установлен - закрываем модалку пароля и показываем реферальную ссылку
+        if (userData.has_password) {
+          console.log('[Payment] Password exists, switching to telegram modal with referral link');
+          // Закрываем модалку пароля (если она была открыта)
+          setShowPasswordSetup(false);
+          
+          // Показываем Telegram модал с реферальной ссылкой
           const apiBase = getApiBase();
           const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
           const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
-          console.log('Referral link:', refLink);
+          console.log('[Payment] Referral link:', refLink);
           setReferralLink(refLink);
           setShowTelegramModal(true);
+        } else {
+          // Пароль не установлен - показываем/обновляем модалку пароля
+          console.log('[Payment] No password, showing password setup modal');
+          setShowPasswordSetup(true);
         }
         // Очищаем старый флаг из localStorage
         localStorage.removeItem('payment_success_shown');

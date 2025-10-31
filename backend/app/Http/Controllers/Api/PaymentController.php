@@ -138,8 +138,11 @@ class PaymentController extends Controller
         }
 
         // Убираем слэш в конце и добавляем путь с параметрами
+        // Используем query параметры ДО hash для лучшей совместимости
         $frontendUrl = rtrim($frontendUrl, '/');
-        return $frontendUrl . '#/payment?success=1';
+        // Формат: http://domain:port/?success=1#/payment
+        // Это гарантирует, что параметр будет виден и в search, и может быть обработан в hash
+        return $frontendUrl . '/?success=1#/payment';
     }
 }
 
