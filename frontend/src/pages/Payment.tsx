@@ -55,36 +55,46 @@ const Payment: React.FC = () => {
         }
       }
 
+      // Сохраняем флаг возврата ДО очистки URL
+      const shouldShowModal = true; // Всегда показываем при возврате с success=1
+      
       // Проверяем наличие оплаченного платежа перед показом модала
       // Это гарантирует, что модал покажется даже если флаг уже был установлен
       // Не ждем завершения, чтобы страница загрузилась сразу
-      checkPaymentStatusAndShowModal().catch(err => {
+      checkPaymentStatusAndShowModal(shouldShowModal).catch(err => {
         console.error('Error checking payment status:', err);
         // При любой ошибке показываем модал для ввода пароля
         setShowPasswordSetup(true);
       }).finally(() => {
         // Убираем параметр из URL, сохраняя hash для правильного роутинга
-        try {
-          const newUrl = window.location.pathname + (window.location.hash || '#/payment');
-          safeHistoryReplace(newUrl);
-        } catch (e) {
-          console.error('Error replacing URL:', e);
-        } finally {
-          isProcessingPaymentRef.current = false;
-        }
+        // Но делаем это с небольшой задержкой, чтобы проверка успела выполниться
+        setTimeout(() => {
+          try {
+            const newUrl = window.location.pathname + (window.location.hash || '#/payment');
+            safeHistoryReplace(newUrl);
+          } catch (e) {
+            console.error('Error replacing URL:', e);
+          } finally {
+            isProcessingPaymentRef.current = false;
+          }
+        }, 500);
       });
     }
   }, []);
 
   // Проверяет статус оплаты и показывает соответствующий модал
-  const checkPaymentStatusAndShowModal = async (retryCount: number = 0) => {
+  const checkPaymentStatusAndShowModal = async (forceShow: boolean = false, retryCount: number = 0) => {
     const MAX_RETRIES = 3; // Максимум 3 попытки
     
     const token = localStorage.getItem('api_token');
     if (!token) {
       console.error('No auth token found');
-      // Даже без токена показываем модал для ввода пароля
-      setShowPasswordSetup(true);
+      // Даже без токена показываем модал для ввода пароля при возврате с оплаты
+      if (forceShow) {
+        // Пытаемся получить userId из другого источника или устанавливаем временный
+        // Модал сам получит userId из токена при его наличии
+        setShowPasswordSetup(true);
+      }
       return;
     }
 
@@ -102,15 +112,17 @@ const Payment: React.FC = () => {
     if (!userResponse || !userResponse.ok) {
       console.error('Failed to fetch user data:', userResponse?.status);
       
-      // Если превышено количество попыток - показываем модал в любом случае
-      if (retryCount >= MAX_RETRIES) {
-        console.warn('Max retries reached, showing password setup modal anyway');
+      // Если превышено количество попыток или принудительно - показываем модал в любом случае
+      if (retryCount >= MAX_RETRIES || forceShow) {
+        console.warn('Max retries reached or forced, showing password setup modal. Retry count:', retryCount, 'Force show:', forceShow);
+        // Пытаемся получить userId из токена (если токен декодируемый JWT)
+        // Или просто показываем модал без userId - он получит его из API
         setShowPasswordSetup(true);
         return;
       }
       
       // Повторяем попытку через секунду
-      setTimeout(() => checkPaymentStatusAndShowModal(retryCount + 1), 1000);
+      setTimeout(() => checkPaymentStatusAndShowModal(forceShow, retryCount + 1), 1000);
       return;
     }
 
@@ -118,61 +130,35 @@ const Payment: React.FC = () => {
       const userData = await userResponse.json();
       setUserId(userData.id);
 
-      // Проверяем наличие оплаченного платежа через API (если есть такой endpoint)
-      // Показываем модал независимо от флага, если есть success=1 в URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const isReturnFromPayment = urlParams.get('success') === '1';
-
-      if (isReturnFromPayment) {
-        // Используем более надежный ключ на основе времени (с точностью до секунды)
-        // Это позволяет показать модал при каждом новом возврате с оплаты
-        const timeKey = Math.floor(Date.now() / 1000); // Время в секундах
-        const sessionKey = `payment_modal_${userData.id}_${timeKey}`;
+      // Если forceShow=true, значит мы вернулись с оплаты - показываем модал
+      if (forceShow) {
+        console.log('Force show modal, userData:', { id: userData.id, has_password: userData.has_password });
         
-        // Проверяем, показывали ли модал для этого конкретного URL + времени
-        // Очищаем старые ключи (старше 5 минут)
-        try {
-          const keysToRemove: string[] = [];
-          for (let i = 0; i < sessionStorage.length; i++) {
-            const key = sessionStorage.key(i);
-            if (key?.startsWith(`payment_modal_${userData.id}_`)) {
-              const keyTime = parseInt(key.split('_').pop() || '0');
-              if (Date.now() / 1000 - keyTime > 300) { // 5 минут
-                keysToRemove.push(key);
-              }
-            }
-          }
-          keysToRemove.forEach(key => sessionStorage.removeItem(key));
-        } catch (e) {
-          // Игнорируем ошибки очистки
+        // Показываем форму создания пароля только если пароль еще не установлен
+        if (!userData.has_password) {
+          console.log('Showing password setup modal - no password');
+          setUserId(userData.id); // Устанавливаем userId перед показом модала
+          setShowPasswordSetup(true);
+        } else {
+          // Если пароль уже есть, показываем Telegram модал с реферальной ссылкой
+          console.log('Showing telegram modal - password exists');
+          const apiBase = (await import('../utils/apiBase')).getApiBase();
+          const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
+          const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
+          console.log('Referral link:', refLink);
+          setReferralLink(refLink);
+          setShowTelegramModal(true);
         }
-
-        const hasShownForThisReturn = sessionStorage.getItem(sessionKey);
-        
-        if (!hasShownForThisReturn) {
-          // Показываем форму создания пароля только если пароль еще не установлен
-          if (!userData.has_password) {
-            setShowPasswordSetup(true);
-            sessionStorage.setItem(sessionKey, 'true');
-            // Очищаем старый флаг из localStorage
-            localStorage.removeItem('payment_success_shown');
-          } else {
-            // Если пароль уже есть, показываем Telegram модал
-            const apiBase = (await import('../utils/apiBase')).getApiBase();
-            const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
-            setReferralLink(userData.referral_link || `${correctOrigin}?ref=${userData.id}`);
-            setShowTelegramModal(true);
-            sessionStorage.setItem(sessionKey, 'true');
-            // Очищаем старый флаг из localStorage
-            localStorage.removeItem('payment_success_shown');
-          }
-        }
+        // Очищаем старый флаг из localStorage
+        localStorage.removeItem('payment_success_shown');
       }
     } catch (error) {
       console.error('Error parsing user data:', error);
       localStorage.removeItem('payment_success_shown');
       // При ошибке парсинга показываем модал для ввода пароля
-      setShowPasswordSetup(true);
+      if (forceShow) {
+        setShowPasswordSetup(true);
+      }
     }
   };
 
@@ -268,10 +254,10 @@ const Payment: React.FC = () => {
           </a>
         </div>
         {showThanks && <ThankYouModal onClose={() => setShowThanks(false)} />}
-        {showPasswordSetup && userId && (
+        {showPasswordSetup && (
           <PasswordSetupModal 
             onClose={() => setShowPasswordSetup(false)} 
-            userId={userId} 
+            userId={userId || 0} 
           />
         )}
         {showTelegramModal && (
