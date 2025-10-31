@@ -6,7 +6,18 @@ export function getApiBase(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
     // If running via Vite dev server (localhost:5173), default backend on http://localhost
     if (window.location.port === '5173') {
+      // Check if we're on a production server (IP address)
+      const hostname = window.location.hostname;
+      if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        // Production server: backend is on same IP but port 80 (no port in URL)
+        return `http://${hostname}`;
+      }
       return 'http://localhost';
+    }
+    // For production: if frontend is on IP:5173, backend is on same IP without port
+    const hostname = window.location.hostname;
+    if (window.location.port && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return `http://${hostname}`;
     }
     return window.location.origin;
   }

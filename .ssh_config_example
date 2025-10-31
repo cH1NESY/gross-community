@@ -1,0 +1,16 @@
+# Пример конфигурации SSH для предотвращения разрыва соединения
+# Добавьте это в ~/.ssh/config или создайте файл /home/chingis/.ssh/config
+
+Host *
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    TCPKeepAlive yes
+
+# Или для конкретного хоста:
+Host 5928711-gp794198
+    HostName ваш_ip_сервера
+    User root
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    TCPKeepAlive yes
+

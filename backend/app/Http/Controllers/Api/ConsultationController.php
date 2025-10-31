@@ -30,9 +30,11 @@ class ConsultationController extends Controller
             ], 422);
         }
 
+        // Пытаемся отправить уведомление, но не блокируем ответ пользователю
+        $smsSent = false;
+        
         try {
-            // Отправляем SMS уведомление в очередь RabbitMQ
-            // Если очередь недоступна, отправляем синхронно
+            // Пытаемся отправить в очередь RabbitMQ
             try {
                 SendConsultationSms::dispatch(
                     $request->input('full_name'),
@@ -40,47 +42,58 @@ class ConsultationController extends Controller
                     $request->input('email')
                 )->onConnection('rabbitmq')->onQueue('default');
                 
+                $smsSent = true;
                 Log::info('Заявка на консультацию отправлена в очередь RabbitMQ', [
                     'user_name' => $request->input('full_name'),
                     'user_phone' => $request->input('phone'),
                     'user_email' => $request->input('email')
                 ]);
             } catch (\Exception $queueException) {
-                // Если очередь недоступна, отправляем синхронно
-                Log::warning('Очередь RabbitMQ недоступна, отправка синхронно', [
+                // Если очередь недоступна, пробуем синхронно
+                Log::warning('Очередь RabbitMQ недоступна, пробуем синхронно', [
                     'error' => $queueException->getMessage()
                 ]);
                 
-                SendConsultationSms::dispatchSync(
-                    $request->input('full_name'),
-                    $request->input('phone'),
-                    $request->input('email')
-                );
-                
-                Log::info('Заявка на консультацию отправлена синхронно', [
-                    'user_name' => $request->input('full_name'),
-                    'user_phone' => $request->input('phone'),
-                    'user_email' => $request->input('email')
-                ]);
+                try {
+                    SendConsultationSms::dispatchSync(
+                        $request->input('full_name'),
+                        $request->input('phone'),
+                        $request->input('email')
+                    );
+                    $smsSent = true;
+                    Log::info('Заявка на консультацию отправлена синхронно', [
+                        'user_name' => $request->input('full_name'),
+                        'user_phone' => $request->input('phone'),
+                        'user_email' => $request->input('email')
+                    ]);
+                } catch (\Exception $syncException) {
+                    // Если синхронная отправка тоже не удалась, просто логируем
+                    Log::error('Не удалось отправить SMS уведомление', [
+                        'error' => $syncException->getMessage(),
+                        'queue_error' => $queueException->getMessage(),
+                        'user_name' => $request->input('full_name'),
+                        'user_phone' => $request->input('phone'),
+                        'user_email' => $request->input('email')
+                    ]);
+                    // Продолжаем выполнение - пользователь все равно получит ответ об успехе
+                }
             }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Заявка на консультацию отправлена! Мы свяжемся с вами в ближайшее время.'
-            ]);
-
         } catch (\Exception $e) {
-            Log::error('Ошибка при отправке заявки на консультацию', [
+            // Логируем, но не прерываем выполнение
+            Log::error('Неожиданная ошибка при обработке заявки на консультацию', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'user_name' => $request->input('full_name'),
                 'user_phone' => $request->input('phone'),
                 'user_email' => $request->input('email')
             ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Произошла ошибка при отправке заявки. Попробуйте позже.'
-            ], 500);
         }
+
+        // Всегда возвращаем успешный ответ, даже если SMS не отправилось
+        // Это гарантирует, что пользователь не увидит ошибку из-за проблем с SMS
+        return response()->json([
+            'success' => true,
+            'message' => 'Заявка на консультацию отправлена! Мы свяжемся с вами в ближайшее время.'
+        ]);
     }
 }

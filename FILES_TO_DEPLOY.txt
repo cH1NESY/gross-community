@@ -1,0 +1,19 @@
+Список файлов для деплоя на сервер:
+=====================================
+
+BACKEND (обязательно):
+1. backend/config/cors.php
+2. backend/docker/nginx/nginx.conf
+3. backend/app/Http/Controllers/Api/ConsultationController.php
+
+FRONTEND (если используете на сервере):
+4. frontend/src/utils/apiBase.ts
+
+=====================================
+Всего файлов: 4
+
+После загрузки на сервере выполните:
+cd ~/gross-community/backend
+docker exec php-fpm-gross php artisan config:clear
+docker exec php-fpm-gross php artisan cache:clear
+docker restart nginx-gross
