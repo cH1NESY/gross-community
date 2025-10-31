@@ -50,53 +50,102 @@ const Payment: React.FC = () => {
         }
       }
 
-      // Проверяем, не показывали ли уже модал для этого пользователя
-      const hasShownModal = localStorage.getItem('payment_success_shown');
-      if (!hasShownModal) {
-        checkUserPasswordStatus();
-        // Помечаем, что модал уже показан
-        localStorage.setItem('payment_success_shown', 'true');
-      }
-      // Убираем параметр из URL, сохраняя hash для правильного роутинга
-      const newUrl = window.location.pathname + window.location.hash;
-      safeHistoryReplace(newUrl);
+      // Проверяем наличие оплаченного платежа перед показом модала
+      // Это гарантирует, что модал покажется даже если флаг уже был установлен
+      checkPaymentStatusAndShowModal().then(() => {
+        // Убираем параметр из URL, сохраняя hash для правильного роутинга
+        const newUrl = window.location.pathname + window.location.hash;
+        safeHistoryReplace(newUrl);
+      });
     }
   }, []);
 
-  const checkUserPasswordStatus = async () => {
-    const response = await safeFetch(apiUrl('/user'), {
+  // Проверяет статус оплаты и показывает соответствующий модал
+  const checkPaymentStatusAndShowModal = async () => {
+    const token = localStorage.getItem('api_token');
+    if (!token) {
+      console.error('No auth token found');
+      return;
+    }
+
+    // Небольшая задержка для того, чтобы webhook успел обработать платеж
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Проверяем данные пользователя
+    const userResponse = await safeFetch(apiUrl('/user'), {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('api_token')}`,
+        'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
       }
     }, 10000);
     
-    if (response && response.ok) {
-      try {
-        const userData = await response.json();
-        setUserId(userData.id);
+    if (!userResponse || !userResponse.ok) {
+      console.error('Failed to fetch user data:', userResponse?.status);
+      // Повторяем попытку через секунду
+      setTimeout(() => checkPaymentStatusAndShowModal(), 1000);
+      return;
+    }
+
+    try {
+      const userData = await userResponse.json();
+      setUserId(userData.id);
+
+      // Проверяем наличие оплаченного платежа через API (если есть такой endpoint)
+      // Показываем модал независимо от флага, если есть success=1 в URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const isReturnFromPayment = urlParams.get('success') === '1';
+
+      if (isReturnFromPayment) {
+        // Используем более надежный ключ на основе времени (с точностью до секунды)
+        // Это позволяет показать модал при каждом новом возврате с оплаты
+        const timeKey = Math.floor(Date.now() / 1000); // Время в секундах
+        const sessionKey = `payment_modal_${userData.id}_${timeKey}`;
         
-        // Показываем форму создания пароля только если пароль еще не установлен
-        if (!userData.has_password) {
-          setShowPasswordSetup(true);
-        } else {
-          // Если пароль уже есть, показываем Telegram модал
-          // Определяем правильный origin (может быть изменен после редиректа)
-          const apiBase = (await import('../utils/apiBase')).getApiBase();
-          const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
-          setReferralLink(userData.referral_link || `${correctOrigin}?ref=${userData.id}`);
-          setShowTelegramModal(true);
+        // Проверяем, показывали ли модал для этого конкретного URL + времени
+        // Очищаем старые ключи (старше 5 минут)
+        try {
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key?.startsWith(`payment_modal_${userData.id}_`)) {
+              const keyTime = parseInt(key.split('_').pop() || '0');
+              if (Date.now() / 1000 - keyTime > 300) { // 5 минут
+                keysToRemove.push(key);
+              }
+            }
+          }
+          keysToRemove.forEach(key => sessionStorage.removeItem(key));
+        } catch (e) {
+          // Игнорируем ошибки очистки
         }
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('payment_success_shown');
+
+        const hasShownForThisReturn = sessionStorage.getItem(sessionKey);
+        
+        if (!hasShownForThisReturn) {
+          // Показываем форму создания пароля только если пароль еще не установлен
+          if (!userData.has_password) {
+            setShowPasswordSetup(true);
+            sessionStorage.setItem(sessionKey, 'true');
+            // Очищаем старый флаг из localStorage
+            localStorage.removeItem('payment_success_shown');
+          } else {
+            // Если пароль уже есть, показываем Telegram модал
+            const apiBase = (await import('../utils/apiBase')).getApiBase();
+            const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
+            setReferralLink(userData.referral_link || `${correctOrigin}?ref=${userData.id}`);
+            setShowTelegramModal(true);
+            sessionStorage.setItem(sessionKey, 'true');
+            // Очищаем старый флаг из localStorage
+            localStorage.removeItem('payment_success_shown');
+          }
+        }
       }
-    } else {
-      console.error('Failed to fetch user data:', response?.status);
-      // Если не удалось получить данные пользователя, очищаем флаг
+    } catch (error) {
+      console.error('Error parsing user data:', error);
       localStorage.removeItem('payment_success_shown');
     }
   };
+
 
   const triggerPayment = async () => {
     const response = await safeFetch(apiUrl('/payments'), {

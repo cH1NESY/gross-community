@@ -31,45 +31,45 @@ class ConsultationController extends Controller
         }
 
         // Пытаемся отправить уведомление, но не блокируем ответ пользователю
-        $smsSent = false;
-        
+        // Все ошибки логируются, но не влияют на ответ пользователю
         try {
             // Пытаемся отправить в очередь RabbitMQ
             try {
-                SendConsultationSms::dispatch(
+                @SendConsultationSms::dispatch(
                     $request->input('full_name'),
                     $request->input('phone'),
                     $request->input('email')
                 )->onConnection('rabbitmq')->onQueue('default');
                 
-                $smsSent = true;
                 Log::info('Заявка на консультацию отправлена в очередь RabbitMQ', [
                     'user_name' => $request->input('full_name'),
                     'user_phone' => $request->input('phone'),
                     'user_email' => $request->input('email')
                 ]);
-            } catch (\Exception $queueException) {
+            } catch (\Throwable $queueException) {
                 // Если очередь недоступна, пробуем синхронно
                 Log::warning('Очередь RabbitMQ недоступна, пробуем синхронно', [
-                    'error' => $queueException->getMessage()
+                    'error' => $queueException->getMessage(),
+                    'class' => get_class($queueException)
                 ]);
                 
                 try {
-                    SendConsultationSms::dispatchSync(
+                    @SendConsultationSms::dispatchSync(
                         $request->input('full_name'),
                         $request->input('phone'),
                         $request->input('email')
                     );
-                    $smsSent = true;
+                    
                     Log::info('Заявка на консультацию отправлена синхронно', [
                         'user_name' => $request->input('full_name'),
                         'user_phone' => $request->input('phone'),
                         'user_email' => $request->input('email')
                     ]);
-                } catch (\Exception $syncException) {
+                } catch (\Throwable $syncException) {
                     // Если синхронная отправка тоже не удалась, просто логируем
                     Log::error('Не удалось отправить SMS уведомление', [
                         'error' => $syncException->getMessage(),
+                        'class' => get_class($syncException),
                         'queue_error' => $queueException->getMessage(),
                         'user_name' => $request->input('full_name'),
                         'user_phone' => $request->input('phone'),
@@ -78,10 +78,11 @@ class ConsultationController extends Controller
                     // Продолжаем выполнение - пользователь все равно получит ответ об успехе
                 }
             }
-        } catch (\Exception $e) {
-            // Логируем, но не прерываем выполнение
+        } catch (\Throwable $e) {
+            // Логируем любые другие ошибки, но не прерываем выполнение
             Log::error('Неожиданная ошибка при обработке заявки на консультацию', [
                 'error' => $e->getMessage(),
+                'class' => get_class($e),
                 'trace' => $e->getTraceAsString(),
                 'user_name' => $request->input('full_name'),
                 'user_phone' => $request->input('phone'),
@@ -89,11 +90,11 @@ class ConsultationController extends Controller
             ]);
         }
 
-        // Всегда возвращаем успешный ответ, даже если SMS не отправилось
-        // Это гарантирует, что пользователь не увидит ошибку из-за проблем с SMS
+        // ВСЕГДА возвращаем успешный ответ пользователю
+        // Проблемы с уведомлениями не должны влиять на UX
         return response()->json([
             'success' => true,
             'message' => 'Заявка на консультацию отправлена! Мы свяжемся с вами в ближайшее время.'
-        ]);
+        ], 200);
     }
 }
