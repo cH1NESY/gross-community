@@ -29,8 +29,10 @@ export function getApiBase(): string {
         return base;
       } else {
         // Production: бэкенд на том же IP, но без порта (порт 80)
+        // Если это IP адрес сервера, используем его напрямую
         const base = `http://${hostname}`;
         console.log('[apiBase] Production server, using:', base);
+        console.log('[apiBase] Full API URL will be:', `${base}/api/*`);
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('api_base', base);
         }
@@ -69,7 +71,9 @@ export function getApiBase(): string {
 export function apiUrl(path: string): string {
   const base = getApiBase();
   const cleanPath = path.startsWith('/api') ? path : `/api${path.startsWith('/') ? path : `/${path}`}`;
-  return `${base}${cleanPath}`;
+  const fullUrl = `${base}${cleanPath}`;
+  console.log('[apiUrl] Generated URL:', fullUrl);
+  return fullUrl;
 }
 
 

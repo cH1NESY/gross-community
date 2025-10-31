@@ -8,35 +8,59 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Requests\RegisterRequest;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     public function register(RegisterRequest $request): JsonResponse
     {
-        $validated = $request->validated();
+        try {
+            $validated = $request->validated();
 
-        $user = User::create([
-            'full_name' => $validated['full_name'],
-            'email' => $validated['email'],
-            'password' => null, // Пароль будет установлен после оплаты
-            'telegram_tag' => $validated['telegram_tag'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'city' => $validated['city'] ?? null,
-            'referral_link' => $validated['referral_link'] ?? null,
-            'agree_to_policy' => true,
-        ]);
+            $user = User::create([
+                'full_name' => $validated['full_name'],
+                'email' => $validated['email'],
+                'password' => null, // Пароль будет установлен после оплаты
+                'telegram_tag' => $validated['telegram_tag'] ?? null,
+                'phone' => $validated['phone'] ?? null,
+                'city' => $validated['city'] ?? null,
+                'referral_link' => $validated['referral_link'] ?? null,
+                'agree_to_policy' => true,
+            ]);
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+            $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json([
-            'token' => $token, 
-            'user' => [
-                'id' => $user->id, 
-                'full_name' => $user->full_name, 
-                'email' => $user->email
-            ]
-        ]);
+            return response()->json([
+                'token' => $token, 
+                'user' => [
+                    'id' => $user->id, 
+                    'full_name' => $user->full_name, 
+                    'email' => $user->email
+                ]
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error('Database error in register', [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Ошибка базы данных',
+                'message' => config('app.debug') ? $e->getMessage() : 'Не удалось зарегистрировать пользователя'
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error('Error in register endpoint', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Внутренняя ошибка сервера',
+                'message' => config('app.debug') ? $e->getMessage() : 'Ошибка при регистрации'
+            ], 500);
+        }
     }
 
     public function login(Request $request): JsonResponse
@@ -55,20 +79,39 @@ class AuthController extends Controller
         return response()->json(['token' => $token, 'user' => ['id' => $user->id, 'full_name' => $user->full_name, 'email' => $user->email]]);
     }
 
-    public function user(Request $request)
+    public function user(Request $request): JsonResponse
     {
-        $user = $request->user();
-        return [
-            'id' => $user->id,
-            'full_name' => $user->full_name,
-            'email' => $user->email,
-            'telegram_tag' => $user->telegram_tag,
-            'phone' => $user->phone,
-            'city' => $user->city,
-            'referral_link' => $user->referral_link,
-            'has_password' => !is_null($user->password),
-            'created_at' => $user->created_at,
-        ];
+        try {
+            $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'error' => 'Пользователь не авторизован'
+                ], 401);
+            }
+            
+            return response()->json([
+                'id' => $user->id,
+                'full_name' => $user->full_name,
+                'email' => $user->email,
+                'telegram_tag' => $user->telegram_tag,
+                'phone' => $user->phone,
+                'city' => $user->city,
+                'referral_link' => $user->referral_link,
+                'has_password' => !is_null($user->password),
+                'created_at' => $user->created_at,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in user endpoint', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Внутренняя ошибка сервера',
+                'message' => config('app.debug') ? $e->getMessage() : 'Ошибка при получении данных пользователя'
+            ], 500);
+        }
     }
 
     public function setupPassword(Request $request): JsonResponse
