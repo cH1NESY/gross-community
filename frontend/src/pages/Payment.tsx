@@ -3,7 +3,7 @@ import ThankYouModal from '../components/ThankYouModal';
 import PasswordSetupModal from '../components/PasswordSetupModal';
 import TelegramModal from '../components/TelegramModal';
 import { safeFetch, safeNavigate, safeHistoryReplace } from '../utils/safeAsync';
-import { apiUrl } from '../utils/apiBase';
+import { apiUrl, getApiBase } from '../utils/apiBase';
 
 const Card: React.FC<{ title: string; value: string; note?: string }> = ({ title, value, note }) => (
   <div className="rounded-2xl p-6 bg-gradient-to-br from-gray-900/80 to-black/80 border border-pink-500/30 shadow-[0_10px_40px_-10px_rgba(236,72,153,0.4)]">
@@ -23,9 +23,11 @@ const Payment: React.FC = () => {
   
   useEffect(() => {
     // Инициализируем правильный API base при загрузке (на случай редиректа с оплаты)
-    import('../utils/apiBase').then(({ getApiBase }) => {
+    try {
       getApiBase(); // Инициализируем и сохраняем в sessionStorage
-    });
+    } catch (e) {
+      console.error('Error initializing API base:', e);
+    }
 
     // Проверяем, вернулся ли пользователь после оплаты
     const urlParams = new URLSearchParams(window.location.search);
@@ -33,28 +35,7 @@ const Payment: React.FC = () => {
     
     if (isSuccessReturn && !isProcessingPaymentRef.current) {
       isProcessingPaymentRef.current = true;
-      // Восстанавливаем правильный API base после редиректа
-      const currentHost = window.location.hostname;
-      // Если редирект был на localhost, но мы на сервере - исправляем
-      if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-        // Пытаемся определить правильный хост из sessionStorage
-        const savedBase = sessionStorage.getItem('api_base');
-        if (savedBase) {
-          try {
-            const savedHost = new URL(savedBase).hostname;
-            // Если сохраненный хост не localhost, значит мы на сервере
-            if (savedHost !== 'localhost' && savedHost !== '127.0.0.1') {
-              // Исправляем location на правильный
-              const correctUrl = savedBase + window.location.pathname + window.location.search + window.location.hash;
-              window.location.href = correctUrl;
-              return;
-            }
-          } catch (e) {
-            // Игнорируем ошибки парсинга
-          }
-        }
-      }
-
+      
       // Сохраняем флаг возврата ДО очистки URL
       const shouldShowModal = true; // Всегда показываем при возврате с success=1
       
@@ -142,7 +123,7 @@ const Payment: React.FC = () => {
         } else {
           // Если пароль уже есть, показываем Telegram модал с реферальной ссылкой
           console.log('Showing telegram modal - password exists');
-          const apiBase = (await import('../utils/apiBase')).getApiBase();
+          const apiBase = getApiBase();
           const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
           const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
           console.log('Referral link:', refLink);
