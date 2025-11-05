@@ -26,7 +26,7 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [countryCode, setCountryCode] = useState('+7');
   const [showTelegramModal, setShowTelegramModal] = useState(false);
-  const [userReferralLink, setUserReferralLink] = useState('');
+  const [userReferralLink] = useState('');
 
   const countryCodes = [
     { code: '+7', country: 'RU' },

@@ -1,6 +1,4 @@
 import React from 'react';
-import womanImg from '../images/woman.png';
-import { Play } from 'lucide-react';
 
 interface HeroSectionProps {
   onJoinClick: () => void;
@@ -17,10 +15,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onJoinClick, onScrollToSectio
     { text: 'Возможность заработка', id: 'earnings' },
   ];
 
-  const handlePresentationClick = () => {
-    // Здесь будет логика открытия презентации
-    console.log('Открыть презентацию');
-  };
+
 
   return (
     <section className="py-8 sm:py-12 lg:py-24">
@@ -90,10 +85,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onJoinClick, onScrollToSectio
             loop
             playsInline
           >
-            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4" />
+            <source src="" type="video/mp4" />
             {/* Fallback изображение если видео не загрузится */}
             <img
-              src="https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=1200"
+              src=""
               alt="Презентация Gross Community"
               className="w-full h-full object-cover"
             />

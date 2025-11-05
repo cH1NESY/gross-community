@@ -39,3 +39,5 @@ docker exec php-fpm-gross php artisan tinker --execute="echo 'Tables: ' . DB::se
 
 Теперь API запросы должны работать!
 
+
+

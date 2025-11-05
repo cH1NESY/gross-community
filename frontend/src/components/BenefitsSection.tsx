@@ -63,12 +63,12 @@ const BenefitsSection: React.FC = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const chatsRef = useRef<HTMLDivElement | null>(null);
   const toursRef = useRef<HTMLDivElement | null>(null);
-  const [chatsActiveIndex, setChatsActiveIndex] = useState<number>(0);
+  const [, setChatsActiveIndex] = useState<number>(0);
   const [showTourArrows, setShowTourArrows] = useState<boolean>(false);
   const chatsCountRef = useRef<number>(0);
   const cardWidthRef = useRef<number>(0);
-  const isInitializedRef = useRef<boolean>(false);
-  const currentIndexRef = useRef<number>(1); // starts at 1 because of leading clone
+  const isInitializedRef = useRef<boolean>(false);useRef<number>(1);
+
 
   useEffect(() => {
     const scroller = chatsRef.current;
@@ -104,58 +104,8 @@ const BenefitsSection: React.FC = () => {
     }
   }, []);
 
-  const scrollChatsTo = (index: number) => {
-    const scroller = chatsRef.current;
-    if (!scroller) return;
-    const first = scroller.firstElementChild as HTMLElement | null;
-    const cardWidth = first ? first.offsetWidth + 16 : 300;
-    scroller.scrollTo({ left: Math.max(index, 0) * cardWidth, behavior: 'smooth' });
-  };
 
-  // Controls for chats with seamless infinite effect
-  const getCardWidth = () => cardWidthRef.current || 360;
 
-  const handleChatsNext = () => {
-    const scroller = chatsRef.current;
-    if (!scroller) return;
-    const w = getCardWidth();
-    currentIndexRef.current += 1;
-    scroller.style.scrollBehavior = 'smooth';
-    scroller.scrollLeft += w;
-    scroller.addEventListener(
-      'transitionend',
-      () => {},
-      { once: true }
-    );
-    setTimeout(() => {
-      if (currentIndexRef.current >= chatsCountRef.current + 1) {
-        scroller.style.scrollBehavior = 'auto';
-        scroller.scrollLeft = w;
-        // force reflow then restore smooth to avoid jank
-        void scroller.offsetHeight;
-        scroller.style.scrollBehavior = 'smooth';
-        currentIndexRef.current = 1;
-      }
-    }, 320);
-  };
-
-  const handleChatsPrev = () => {
-    const scroller = chatsRef.current;
-    if (!scroller) return;
-    const w = getCardWidth();
-    currentIndexRef.current -= 1;
-    scroller.style.scrollBehavior = 'smooth';
-    scroller.scrollLeft -= w;
-    setTimeout(() => {
-      if (currentIndexRef.current <= 0) {
-        scroller.style.scrollBehavior = 'auto';
-        scroller.scrollLeft = chatsCountRef.current * w;
-        void scroller.offsetHeight;
-        scroller.style.scrollBehavior = 'smooth';
-        currentIndexRef.current = chatsCountRef.current;
-      }
-    }, 320);
-  };
 
   const handleToursScroll = (dir: 'prev' | 'next') => {
     const scroller = toursRef.current;
@@ -174,7 +124,7 @@ const BenefitsSection: React.FC = () => {
       return (
         <ul className="list-disc list-inside text-pink-100 space-y-1">
           {lines.filter(Boolean).map((l, i) => (
-            <li key={i} className="text-sm leading-relaxed">{l.replace(/^([•\-]\s*)/, '')}</li>
+            <li key={i} className="text-sm leading-relaxed">{l.replace(/^([•-]\s*)/, '')}</li>
           ))}
         </ul>
       );
@@ -222,28 +172,7 @@ const BenefitsSection: React.FC = () => {
     );
   };
 
-  const HoverInfo: React.FC<{ index: number; title: string; content: string }> = ({ index, title, content }) => (
-    <div
-      className="relative group border border-pink-500/20 rounded-xl p-4 bg-black/20 overflow-visible"
-      onMouseEnter={() => setHoveredIndex(index)}
-      onMouseLeave={() => setHoveredIndex((prev) => (prev === index ? null : prev))}
-    >
-      <div className="flex items-center justify-between">
-        <h4 className="text-lg font-semibold text-white">{title}</h4>
-        <span className="text-pink-300 text-sm">наведите</span>
-      </div>
-      {hoveredIndex === index && (
-        <div className="absolute left-0 right-0 top-full mt-2 z-20">
-          <div className="fade-in-up rounded-xl border border-pink-500/40 bg-pink-900 p-0 shadow-2xl overflow-hidden max-w-3xl">
-            <div className="bg-pink-800/60 px-4 py-3 text-pink-100 text-sm font-semibold">
-              {title}
-            </div>
-            <div className="p-4 space-y-2">{renderRichText(content)}</div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+
 
   const HoverInfoOverlay: React.FC<{ index: number; title: string; content: string }> = ({ index, title, content }) => (
     <div
@@ -272,10 +201,8 @@ const BenefitsSection: React.FC = () => {
     <div>
       {sections.map((section, index) => {
         const IconComponent = section.icon;
-        const isReverse = index % 2 === 1;
-        
         return (
-          <section key={section.id} id={section.id} className="py-12 sm:py-16 lg:py-24 border-b border-pink-500/10">
+            <section key={section.id} id={section.id} className="py-12 sm:py-16 lg:py-24 border-b border-pink-500/10">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className={`grid grid-cols-1`}>
                 <div className={`space-y-6 sm:space-y-8`}>
@@ -473,23 +400,23 @@ const BenefitsSection: React.FC = () => {
                               style={{ backgroundImage: 'url(./../../public/4_2.JPG)' }}
                             >
                             </div>
-                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат с домашними тренировками</p>
+                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Sport</p>
                           </div>
                           <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
                               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
-                              style={{ backgroundImage: 'url(./../../public/4_3.JPG)' }}
+                              style={{ backgroundImage: 'url(./../../public/4_3.jpg)' }}
                             >
                             </div>
-                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат с нутрициологом</p>
+                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Businesswomen’s chat</p>
                           </div>
                           <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
                               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
-                              style={{ backgroundImage: 'url(./../../public/4_4.JPG)' }}
+                              style={{ backgroundImage: 'url(./../../public/4_4.jpg)' }}
                             >
                             </div>
-                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат по духовному развитию</p>
+                            <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Финансовая грамотность</p>
                           </div>
                           <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
@@ -649,19 +576,7 @@ const BenefitsSection: React.FC = () => {
                   </div>
                 </div>
                 
-                {false && (
-                <div className={`relative ${isReverse ? 'lg:order-1' : ''}`}>
-                  <div className="aspect-[4/3] bg-gradient-to-br from-pink-600 to-pink-800 rounded-3xl p-6 shadow-2xl">
-                    <img
-                      src={section.image}
-                      alt={section.title}
-                      className="w-full h-full object-cover rounded-2xl"
-                    />
-                  </div>
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-pink-500 to-pink-700 rounded-full opacity-20"></div>
-                  <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full opacity-30"></div>
-                </div>
-                )}
+                {false}
               </div>
               
               {/* Разделитель между секциями */}

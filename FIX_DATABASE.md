@@ -102,3 +102,5 @@ docker exec php-fpm-gross php artisan db:show
 docker exec php-fpm-gross php artisan migrate:status
 ```
 
+
+
