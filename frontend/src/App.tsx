@@ -5,6 +5,7 @@ import BenefitsSection from './components/BenefitsSection';
 import Account from './pages/Account';
 import Payment from './pages/Payment';
 import Login from './pages/Login';
+import CheckSubscription from './pages/CheckSubscription';
 import JoinModal from './components/JoinModal';
 import ConsultationModal from './components/ConsultationModal';
 
@@ -113,6 +114,8 @@ function App() {
           <Login />
         ) : currentHash === '#/payment' ? (
           <Payment />
+        ) : currentHash === '#/check-subscription' ? (
+          <CheckSubscription />
         ) : (
           <>
             <HeroSection onJoinClick={handleJoinClick} onScrollToSection={scrollToSection} />

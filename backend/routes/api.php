@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\EarningController;
 use App\Http\Controllers\Api\WithdrawalController;
 use App\Http\Controllers\Api\ConsultationController;
+use App\Http\Controllers\Api\SubscriptionController;
 
 Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
@@ -17,6 +18,7 @@ Route::post('/users', [UserSubmissionController::class, 'store']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/consultation', [ConsultationController::class, 'requestConsultation']);
+Route::post('/check-subscription', [SubscriptionController::class, 'checkSubscription']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
