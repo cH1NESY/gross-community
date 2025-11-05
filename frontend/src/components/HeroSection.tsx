@@ -60,7 +60,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onJoinClick, onScrollToSectio
           <div className="relative order-1 lg:order-2">
             <div className="w-full max-w-[280px] sm:max-w-[350px] md:max-w-[400px] lg:max-w-[450px] mx-auto aspect-[3/4] sm:aspect-[3/4.1] bg-gradient-to-br from-pink-600 to-pink-800 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-2xl flex items-center justify-center overflow-hidden">
               <img
-                src="./../../public/0.jpg"
+                src="/0.jpg"
                 alt="Успешная женщина"
                 className="w-full h-full object-cover rounded-xl"
                 style={{

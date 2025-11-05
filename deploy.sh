@@ -46,8 +46,15 @@ upload_file "backend/app/Http/Controllers/Api/ConsultationController.php" "${REM
 
 # Frontend файлы
 upload_file "frontend/src/utils/apiBase.ts" "${REMOTE_PATH}/frontend/src/utils/apiBase.ts"
+upload_file "frontend/src/pages/CheckSubscription.tsx" "${REMOTE_PATH}/frontend/src/pages/CheckSubscription.tsx"
+upload_file "frontend/src/App.tsx" "${REMOTE_PATH}/frontend/src/App.tsx"
+upload_file "frontend/src/components/Header.tsx" "${REMOTE_PATH}/frontend/src/components/Header.tsx"
 
 echo -e "\n${GREEN}⚙️  Шаг 2: Применение изменений на сервере...${NC}"
+
+# Пересборка фронтенда (ВАЖНО!)
+echo -e "${YELLOW}Собираю фронтенд...${NC}"
+run_cmd "cd ${REMOTE_PATH}/frontend && npm install && npm run build"
 
 # Очистка кэша Laravel
 run_cmd "cd ${REMOTE_PATH}/backend && docker exec php-fpm-gross php artisan config:clear"
@@ -58,6 +65,6 @@ run_cmd "cd ${REMOTE_PATH}/backend && docker restart nginx-gross"
 
 echo -e "\n${GREEN}✅ Деплой завершен успешно!${NC}"
 echo -e "\nПроверьте работу сайта:"
-echo -e "Frontend: http://5.129.248.5:5173"
-echo -e "Backend: http://5.129.248.5"
+echo -e "Frontend (порт 80): http://5.129.248.5/"
+echo -e "Backend API: http://5.129.248.5/api/health"
 

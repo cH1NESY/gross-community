@@ -250,7 +250,7 @@ const BenefitsSection: React.FC = () => {
                           <div className="relative">
                             <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-pink-500/20">
                               <img 
-                                src="./../../public/1.JPG"
+                                src="/1.JPG"
                                 alt="Подруги в каждом городе"
                                 className="w-full h-full object-cover"
                               />
@@ -304,7 +304,7 @@ const BenefitsSection: React.FC = () => {
                           <div className="relative">
                             <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-pink-500/20">
                               <img 
-                                src="./../../public/2.jpg"
+                                src="/2.jpg"
                                 alt="Взаимная поддержка и коллаборации"
                                 className="w-full h-full object-cover"
                               />
@@ -368,7 +368,7 @@ const BenefitsSection: React.FC = () => {
                           <div className="relative">
                             <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-pink-500/20">
                               <img 
-                                src="./../../public/3.JPG"
+                                src="/3.JPG"
                                 alt="Более 50 мероприятий в год"
                                 className="w-full h-full object-cover"
                               />
@@ -389,7 +389,7 @@ const BenefitsSection: React.FC = () => {
                           <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
                               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
-                              style={{ backgroundImage: 'url(./../../public/4_1.jpg)' }}
+                              style={{ backgroundImage: 'url(/4_1.jpg)' }}
                             >
                             </div>
                             <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат по развитию соц. сетей</p>
@@ -397,7 +397,7 @@ const BenefitsSection: React.FC = () => {
                           <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
                               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
-                              style={{ backgroundImage: 'url(./../../public/4_2.JPG)' }}
+                              style={{ backgroundImage: 'url(/4_2.JPG)' }}
                             >
                             </div>
                             <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Sport</p>
@@ -405,7 +405,7 @@ const BenefitsSection: React.FC = () => {
                           <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
                               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
-                              style={{ backgroundImage: 'url(./../../public/4_3.jpg)' }}
+                              style={{ backgroundImage: 'url(/4_3.jpg)' }}
                             >
                             </div>
                             <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Businesswomen’s chat</p>
@@ -413,7 +413,7 @@ const BenefitsSection: React.FC = () => {
                           <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
                               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
-                              style={{ backgroundImage: 'url(./../../public/4_4.jpg)' }}
+                              style={{ backgroundImage: 'url(/4_4.jpg)' }}
                             >
                             </div>
                             <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Финансовая грамотность</p>
@@ -421,7 +421,7 @@ const BenefitsSection: React.FC = () => {
                           <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
                               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
-                              style={{ backgroundImage: 'url(./../../public/4_5.JPG)' }}
+                              style={{ backgroundImage: 'url(/4_5.JPG)' }}
                             >
                             </div>
                             <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат общения</p>
@@ -429,7 +429,7 @@ const BenefitsSection: React.FC = () => {
                           <div className="flex flex-col items-center space-y-2 sm:space-y-3">
                             <div 
                               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 overflow-hidden bg-cover bg-center"
-                              style={{ backgroundImage: 'url(./../../public/4_6.JPG)' }}
+                              style={{ backgroundImage: 'url(/4_6.JPG)' }}
                             >
                             </div>
                             <p className="text-white text-xs sm:text-sm text-center font-medium px-1">• Чат с психологом</p>
@@ -468,7 +468,7 @@ const BenefitsSection: React.FC = () => {
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 w-[min(1100px,95vw)]">
                                 <div
                                   className="relative min-h-[250px] sm:min-h-[300px] lg:min-h-[420px] overflow-hidden"
-                                  style={{ backgroundImage: 'url(./../../public/5.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
+                                  style={{ backgroundImage: 'url(/5.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
                                 >
                                   <div className="absolute inset-0 bg-black/40" />
                                   <div className="relative z-10 p-4 sm:p-6 lg:p-10 h-full flex flex-col justify-end">
