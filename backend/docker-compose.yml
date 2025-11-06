@@ -26,6 +26,8 @@ services:
     container_name: php-fpm-gross
     build: ./docker/php
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"  # Проброс порта для системного Nginx
     volumes:
       - .:/var/www/html
       - ./docker/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-xdebug.ini
