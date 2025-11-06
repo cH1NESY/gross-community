@@ -31,17 +31,12 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Останавливаем Docker Nginx
-echo -e "${YELLOW}📦 Останавливаю Docker Nginx...${NC}"
+# Перезапускаем Docker Nginx с новым портом
+echo -e "${YELLOW}🔄 Перезапускаю Docker Nginx на порту 8080...${NC}"
 cd "$PROJECT_PATH/backend" 2>/dev/null || cd "$PROJECT_PATH"
-docker stop nginx-gross 2>/dev/null || echo "Docker Nginx уже остановлен или не запущен"
-
-# Перезапускаем PHP-FPM с пробросом порта
-echo -e "${YELLOW}🔄 Перезапускаю PHP-FPM с пробросом порта...${NC}"
-cd "$PROJECT_PATH/backend" 2>/dev/null || cd "$PROJECT_PATH"
-docker-compose up -d php-fpm 2>/dev/null || {
+docker-compose up -d web 2>/dev/null || {
     echo -e "${YELLOW}⚠️  Не удалось перезапустить через docker-compose, пробую напрямую...${NC}"
-    docker restart php-fpm-gross 2>/dev/null || echo "PHP-FPM контейнер не найден"
+    docker restart nginx-gross 2>/dev/null || echo "Docker Nginx контейнер не найден"
 }
 
 # Копируем конфигурацию
@@ -62,15 +57,7 @@ else
     exit 1
 fi
 
-# Обновляем пути в конфигурации, если нужно
-if [ "$PROJECT_PATH" != "/root/gross-community" ]; then
-    echo -e "${YELLOW}🔧 Обновляю пути в конфигурации...${NC}"
-    if [ -f "/etc/nginx/sites-available/gross-community" ]; then
-        sed -i "s|/root/gross-community|$PROJECT_PATH|g" /etc/nginx/sites-available/gross-community
-    elif [ -f "/etc/nginx/conf.d/gross-community.conf" ]; then
-        sed -i "s|/root/gross-community|$PROJECT_PATH|g" /etc/nginx/conf.d/gross-community.conf
-    fi
-fi
+# Конфигурация теперь не требует изменения путей, так как проксирует на Docker Nginx
 
 # Проверяем конфигурацию
 echo -e "${YELLOW}🔍 Проверяю конфигурацию Nginx...${NC}"
@@ -94,14 +81,14 @@ else
     exit 1
 fi
 
-# Проверяем PHP-FPM
-echo -e "${YELLOW}🔍 Проверяю доступность PHP-FPM...${NC}"
-if timeout 2 bash -c "echo > /dev/tcp/127.0.0.1/9000" 2>/dev/null; then
-    echo -e "${GREEN}✅ PHP-FPM доступен на порту 9000${NC}"
+# Проверяем Docker Nginx
+echo -e "${YELLOW}🔍 Проверяю доступность Docker Nginx...${NC}"
+if timeout 2 bash -c "echo > /dev/tcp/127.0.0.1/8080" 2>/dev/null; then
+    echo -e "${GREEN}✅ Docker Nginx доступен на порту 8080${NC}"
 else
-    echo -e "${YELLOW}⚠️  PHP-FPM не отвечает на порту 9000. Проверьте:${NC}"
-    echo -e "   docker port php-fpm-gross"
-    echo -e "   docker logs php-fpm-gross"
+    echo -e "${YELLOW}⚠️  Docker Nginx не отвечает на порту 8080. Проверьте:${NC}"
+    echo -e "   docker port nginx-gross"
+    echo -e "   docker logs nginx-gross"
 fi
 
 echo -e "\n${GREEN}✅ Настройка завершена!${NC}\n"
