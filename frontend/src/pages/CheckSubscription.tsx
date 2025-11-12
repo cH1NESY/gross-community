@@ -8,13 +8,17 @@ const CheckSubscription: React.FC = () => {
   const [result, setResult] = useState<{
     subscribed: boolean;
     message: string;
+    joinLink?: string;
+    botLink?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [botLink, setBotLink] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setResult(null);
+    setBotLink(null);
 
     if (!username.trim()) {
       setError('Введите ваш Telegram username');
@@ -43,16 +47,32 @@ const CheckSubscription: React.FC = () => {
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         setError(data.message || 'Ошибка при проверке подписки');
+        if (data?.bot_link) {
+          setBotLink(data.bot_link);
+        }
+        if (data?.join_link) {
+          setResult({
+            subscribed: false,
+            message: data.message || '',
+            joinLink: data.join_link,
+            botLink: data.bot_link,
+          });
+        }
         setLoading(false);
         return;
       }
 
       setResult({
-        subscribed: data.subscribed || false,
+        subscribed: Boolean(data.subscribed),
         message: data.message || '',
+        joinLink: data.join_link,
+        botLink: data.bot_link,
       });
+      if (data?.bot_link) {
+        setBotLink(data.bot_link);
+      }
     } catch (err) {
       console.error('Error checking subscription:', err);
       setError('Ошибка сети. Проверьте подключение к интернету.');
@@ -61,8 +81,12 @@ const CheckSubscription: React.FC = () => {
     }
   };
 
-  const handleJoinTelegram = () => {
-    window.open('https://t.me/grosscommunity', '_blank');
+  const handleJoinTelegram = (link?: string) => {
+    window.open(link || 'https://t.me/+tTW-bBfMvyI0ZTE1', '_blank');
+  };
+
+  const handleOpenBot = (link?: string) => {
+    window.open(link || 'https://t.me/grosscbot', '_blank');
   };
 
   return (
@@ -103,10 +127,22 @@ const CheckSubscription: React.FC = () => {
                 />
               </div>
               {error && (
-                <p className="mt-2 text-sm text-red-400 flex items-center gap-2">
-                  <XCircle className="w-4 h-4" />
-                  {error}
-                </p>
+                <div className="mt-2 space-y-3">
+                  <p className="text-sm text-red-400 flex items-center gap-2">
+                    <XCircle className="w-4 h-4" />
+                    {error}
+                  </p>
+                  {botLink && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenBot(botLink)}
+                      className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                    >
+                      <Send className="w-4 h-4" />
+                      Открыть бота и нажать «Start»
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -156,13 +192,24 @@ const CheckSubscription: React.FC = () => {
                     )}
                   </p>
                   {!result.subscribed && (
-                    <button
-                      onClick={handleJoinTelegram}
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
-                    >
-                      <span>Присоединиться к сообществу</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        onClick={() => handleJoinTelegram(result.joinLink)}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 justify-center"
+                      >
+                        <span>Присоединиться к сообществу</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                      {(result.botLink || botLink) && (
+                        <button
+                          onClick={() => handleOpenBot(result.botLink || botLink || undefined)}
+                          className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 justify-center"
+                        >
+                          <span>Открыть бота</span>
+                          <Send className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -171,9 +218,22 @@ const CheckSubscription: React.FC = () => {
 
           {/* Информационный блок */}
           <div className="mt-8 p-4 bg-gradient-to-br from-pink-900/20 to-purple-900/20 rounded-lg border border-pink-500/20">
-            <p className="text-sm text-gray-300 text-center">
-              <span className="text-pink-300 font-medium">Важно:</span> Для проверки подписки ваш Telegram профиль должен быть публичным 
-              (Settings → Privacy → Profile Photos → Everybody). Проверка выполняется в реальном времени через Telegram API.
+            <p className="text-sm text-gray-300 text-center space-y-2">
+              <span className="block">
+                <span className="text-pink-300 font-medium">Важно:</span> Перед проверкой подпишитесь на нашего бота{' '}
+                <button
+                  type="button"
+                  onClick={() => handleOpenBot(botLink || result?.botLink)}
+                  className="text-pink-200 underline hover:text-pink-100 transition-colors"
+                >
+                  @grosscbot
+                </button>{' '}
+                и нажмите «Start», чтобы предоставить доступ к вашему профилю.
+              </span>
+              <span className="block">
+                Для проверки подписки профиль должен быть <span className="text-pink-200">публичным</span>
+                (Settings → Privacy → Profile Photos → Everybody). Проверка выполняется в реальном времени через Telegram API.
+              </span>
             </p>
           </div>
 

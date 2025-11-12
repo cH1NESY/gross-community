@@ -7,7 +7,7 @@ interface TelegramModalProps {
 }
 
 const TelegramModal: React.FC<TelegramModalProps> = ({ onClose, referralLink }) => {
-  const telegramLink = 'https://t.me/+aFY9v4vcCOoyMTUy';
+  const telegramLink = 'https://t.me/+tTW-bBfMvyI0ZTE1';
 
   const handleJoinTelegram = () => {
     try {

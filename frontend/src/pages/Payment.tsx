@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { X, ExternalLink } from 'lucide-react';
 import ThankYouModal from '../components/ThankYouModal';
 import PasswordSetupModal from '../components/PasswordSetupModal';
 import TelegramModal from '../components/TelegramModal';
@@ -17,8 +18,10 @@ const Payment: React.FC = () => {
   const [showThanks, setShowThanks] = useState(false);
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [showTelegramModal, setShowTelegramModal] = useState(false);
+  const [showSubscriptionPrompt, setShowSubscriptionPrompt] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
+  const [telegramTag, setTelegramTag] = useState<string | null>(null);
   const isProcessingPaymentRef = useRef(false);
   
   useEffect(() => {
@@ -68,17 +71,13 @@ const Payment: React.FC = () => {
       // Сохраняем флаг возврата ДО очистки URL
       const shouldShowModal = true; // Всегда показываем при возврате с success=1
       
-      // Показываем модалку сразу, не дожидаясь проверки API
-      // Это гарантирует, что пользователь всегда увидит форму пароля после оплаты
-      console.log('[Payment] Immediately showing password modal after payment return');
+      console.log('[Payment] Payment return detected, checking subscription and user status');
       
-      // Показываем модалку немедленно, затем пытаемся получить данные пользователя для лучшего UX
-      setShowPasswordSetup(true);
-      
-      // Параллельно проверяем статус и обновляем данные, если получится
+      // Проверяем статус оплаты, подписку и показываем соответствующий модал
       checkPaymentStatusAndShowModal(shouldShowModal).catch(err => {
         console.error('[Payment] Error checking payment status:', err);
-        // Модалка уже показана выше, поэтому просто логируем ошибку
+        // В случае ошибки показываем модалку пароля по умолчанию
+        setShowPasswordSetup(true);
       }).finally(() => {
         // Убираем параметр из URL, сохраняя hash для правильного роутинга
         // Но делаем это с небольшой задержкой, чтобы проверка успела выполниться
@@ -105,8 +104,6 @@ const Payment: React.FC = () => {
       console.error('No auth token found');
       // Даже без токена показываем модал для ввода пароля при возврате с оплаты
       if (forceShow) {
-        // Пытаемся получить userId из другого источника или устанавливаем временный
-        // Модал сам получит userId из токена при его наличии
         setShowPasswordSetup(true);
       }
       return;
@@ -129,8 +126,6 @@ const Payment: React.FC = () => {
       // Если превышено количество попыток или принудительно - показываем модал в любом случае
       if (retryCount >= MAX_RETRIES || forceShow) {
         console.warn('Max retries reached or forced, showing password setup modal. Retry count:', retryCount, 'Force show:', forceShow);
-        // Пытаемся получить userId из токена (если токен декодируемый JWT)
-        // Или просто показываем модал без userId - он получит его из API
         setShowPasswordSetup(true);
         return;
       }
@@ -143,30 +138,35 @@ const Payment: React.FC = () => {
     try {
       const userData = await userResponse.json();
       setUserId(userData.id);
+      setTelegramTag(userData.telegram_tag || null);
 
       // Если forceShow=true, значит мы вернулись с оплаты
       if (forceShow) {
-        console.log('[Payment] Force show modal, userData:', { id: userData.id, has_password: userData.has_password });
-        setUserId(userData.id); // Всегда устанавливаем userId
+        console.log('[Payment] Force show modal, userData:', { 
+          id: userData.id, 
+          has_password: userData.has_password,
+          telegram_tag: userData.telegram_tag 
+        });
         
-        // Если пароль уже установлен - закрываем модалку пароля и показываем реферальную ссылку
-        if (userData.has_password) {
-          console.log('[Payment] Password exists, switching to telegram modal with referral link');
-          // Закрываем модалку пароля (если она была открыта)
-          setShowPasswordSetup(false);
-          
-          // Показываем Telegram модал с реферальной ссылкой
-          const apiBase = getApiBase();
-          const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
-          const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
-          console.log('[Payment] Referral link:', refLink);
-          setReferralLink(refLink);
-          setShowTelegramModal(true);
+        // Проверяем подписку на Telegram группу, если есть telegram_tag
+        if (userData.telegram_tag) {
+          console.log('[Payment] Checking subscription for telegram_tag:', userData.telegram_tag);
+          await checkSubscriptionAndShowModal(userData.telegram_tag, userData);
         } else {
-          // Пароль не установлен - показываем/обновляем модалку пароля
-          console.log('[Payment] No password, showing password setup modal');
-          setShowPasswordSetup(true);
+          // Если нет telegram_tag, показываем модалку пароля по умолчанию
+          console.log('[Payment] No telegram_tag, showing password setup modal');
+          if (userData.has_password) {
+            // Если пароль уже есть, показываем Telegram модал с реферальной ссылкой
+            const apiBase = getApiBase();
+            const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
+            const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
+            setReferralLink(refLink);
+            setShowTelegramModal(true);
+          } else {
+            setShowPasswordSetup(true);
+          }
         }
+        
         // Очищаем старый флаг из localStorage
         localStorage.removeItem('payment_success_shown');
       }
@@ -175,6 +175,79 @@ const Payment: React.FC = () => {
       localStorage.removeItem('payment_success_shown');
       // При ошибке парсинга показываем модал для ввода пароля
       if (forceShow) {
+        setShowPasswordSetup(true);
+      }
+    }
+  };
+
+  // Проверяет подписку пользователя на Telegram группу
+  const checkSubscriptionAndShowModal = async (telegramUsername: string, userData: any) => {
+    try {
+      console.log('[Payment] Checking subscription for:', telegramUsername);
+      
+      // Убираем @ из username, если он есть
+      const cleanUsername = telegramUsername.replace('@', '');
+      
+      const subscriptionResponse = await safeFetch(apiUrl('/check-subscription'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('api_token')}`
+        },
+        body: JSON.stringify({
+          telegram_username: cleanUsername
+        })
+      }, 10000);
+
+      if (!subscriptionResponse || !subscriptionResponse.ok) {
+        console.error('Failed to check subscription:', subscriptionResponse?.status);
+        // В случае ошибки проверки показываем модалку пароля
+        if (userData.has_password) {
+          const apiBase = getApiBase();
+          const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
+          const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
+          setReferralLink(refLink);
+          setShowTelegramModal(true);
+        } else {
+          setShowPasswordSetup(true);
+        }
+        return;
+      }
+
+      const subscriptionData = await subscriptionResponse.json();
+      console.log('[Payment] Subscription check result:', subscriptionData);
+
+      if (subscriptionData.success && subscriptionData.subscribed) {
+        // Пользователь подписан - показываем окно пароля (если пароля нет) или реферальную ссылку
+        console.log('[Payment] User is subscribed, showing password setup or referral link');
+        
+        if (userData.has_password) {
+          // Если пароль уже установлен - показываем Telegram модал с реферальной ссылкой
+          const apiBase = getApiBase();
+          const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
+          const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
+          setReferralLink(refLink);
+          setShowTelegramModal(true);
+        } else {
+          // Пароль не установлен - показываем модалку пароля
+          setShowPasswordSetup(true);
+        }
+      } else {
+        // Пользователь не подписан - показываем сообщение о необходимости подписки
+        console.log('[Payment] User is not subscribed, showing subscription prompt');
+        setShowSubscriptionPrompt(true);
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      // В случае ошибки показываем модалку пароля
+      if (userData.has_password) {
+        const apiBase = getApiBase();
+        const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
+        const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
+        setReferralLink(refLink);
+        setShowTelegramModal(true);
+      } else {
         setShowPasswordSetup(true);
       }
     }
@@ -284,6 +357,117 @@ const Payment: React.FC = () => {
             referralLink={referralLink}
           />
         )}
+        {showSubscriptionPrompt && (
+          <SubscriptionPromptModal
+            onClose={() => setShowSubscriptionPrompt(false)}
+            onJoin={() => {
+              window.open('https://t.me/+tTW-bBfMvyI0ZTE1', '_blank', 'noopener,noreferrer');
+            }}
+            onCheckAgain={async () => {
+              if (telegramTag) {
+                const token = localStorage.getItem('api_token');
+                if (token) {
+                  const userResponse = await safeFetch(apiUrl('/user'), {
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Accept': 'application/json'
+                    }
+                  }, 10000);
+                  if (userResponse && userResponse.ok) {
+                    const userData = await userResponse.json();
+                    setShowSubscriptionPrompt(false);
+                    await checkSubscriptionAndShowModal(userData.telegram_tag, userData);
+                  }
+                }
+              }
+            }}
+            telegramTag={telegramTag}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Модальное окно для запроса подписки на группу
+const SubscriptionPromptModal: React.FC<{ 
+  onClose: () => void; 
+  onJoin: () => void;
+  onCheckAgain?: () => void;
+  telegramTag?: string | null;
+}> = ({ onClose, onJoin, onCheckAgain, telegramTag }) => {
+  const [isChecking, setIsChecking] = useState(false);
+
+  const handleCheckAgain = async () => {
+    if (onCheckAgain) {
+      setIsChecking(true);
+      try {
+        await onCheckAgain();
+      } finally {
+        setIsChecking(false);
+      }
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl w-full max-w-md shadow-2xl border border-pink-500/30">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Подписка на группу</h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-700 rounded-full transition-colors duration-200"
+            >
+              <X size={24} className="text-gray-300" />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">📢</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                Вам необходимо подписаться на группу
+              </h3>
+              <p className="text-gray-300 text-sm">
+                Для завершения регистрации присоединитесь к нашему Telegram сообществу
+              </p>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-4 border border-pink-500/20">
+              <p className="text-white text-sm mb-4">
+                После присоединения к группе нажмите кнопку "Проверить снова", чтобы продолжить регистрацию.
+              </p>
+            </div>
+
+            <div className="text-center space-y-3">
+              <button
+                onClick={onJoin}
+                className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center space-x-2"
+              >
+                <span>Присоединиться к группе</span>
+                <ExternalLink size={18} />
+              </button>
+              {onCheckAgain && telegramTag && (
+                <button
+                  onClick={handleCheckAgain}
+                  disabled={isChecking}
+                  className="w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95"
+                >
+                  {isChecking ? 'Проверка...' : 'Проверить снова'}
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="text-pink-400 hover:text-pink-300 text-sm underline"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
