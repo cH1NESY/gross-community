@@ -82,7 +82,7 @@ const Header: React.FC = () => {
   };
 
   const handleTelegramClick = () => {
-    window.open('https://t.me/+tTW-bBfMvyI0ZTE1', '_blank');
+    window.open('https://t.me/grosscommunity', '_blank');
   };
 
   return (

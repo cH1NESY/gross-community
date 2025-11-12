@@ -19,6 +19,7 @@ const Payment: React.FC = () => {
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [showSubscriptionPrompt, setShowSubscriptionPrompt] = useState(false);
+  const [showPaymentRequired, setShowPaymentRequired] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
   const [telegramTag, setTelegramTag] = useState<string | null>(null);
@@ -32,13 +33,18 @@ const Payment: React.FC = () => {
       console.error('Error initializing API base:', e);
     }
 
-    // Проверяем, вернулся ли пользователь после оплаты
+    // Проверяем, вернулся ли пользователь после оплаты или проверки подписки
     // В hash-based routing параметры могут быть в hash или в search
     let isSuccessReturn = false;
+    let isSubscribed = null; // null = не проверено, true = подписан, false = не подписан
     
     // Сначала проверяем search параметры (обычный способ)
     const urlParams = new URLSearchParams(window.location.search);
     isSuccessReturn = urlParams.get('success') === '1';
+    const subscribedParam = urlParams.get('subscribed');
+    if (subscribedParam !== null) {
+      isSubscribed = subscribedParam === '1';
+    }
     
     // Если не нашли в search, проверяем hash (для hash-based routing)
     if (!isSuccessReturn && window.location.hash) {
@@ -47,14 +53,24 @@ const Payment: React.FC = () => {
         isSuccessReturn = true;
         console.log('[Payment] Found success=1 in hash');
       }
+      // Проверяем subscribed в hash
+      const subscribedMatch = window.location.hash.match(/[?&]subscribed=([01])/);
+      if (subscribedMatch) {
+        isSubscribed = subscribedMatch[1] === '1';
+      }
     }
     
-    // Также проверяем URL напрямую (на случай, если YooKassa вернул нестандартный формат)
+    // Также проверяем URL напрямую (на случай, если YooKassa или бот вернул нестандартный формат)
     if (!isSuccessReturn) {
       const fullUrl = window.location.href;
       if (fullUrl.includes('success=1')) {
         isSuccessReturn = true;
         console.log('[Payment] Found success=1 in full URL');
+      }
+      // Проверяем subscribed в полном URL
+      const subscribedMatch = fullUrl.match(/[?&]subscribed=([01])/);
+      if (subscribedMatch && isSubscribed === null) {
+        isSubscribed = subscribedMatch[1] === '1';
       }
     }
     
@@ -62,36 +78,37 @@ const Payment: React.FC = () => {
       search: window.location.search,
       hash: window.location.hash,
       href: window.location.href,
-      isSuccessReturn
+      isSuccessReturn,
+      isSubscribed
     });
     
     if (isSuccessReturn && !isProcessingPaymentRef.current) {
       isProcessingPaymentRef.current = true;
       
-      // Сохраняем флаг возврата ДО очистки URL
-      const shouldShowModal = true; // Всегда показываем при возврате с success=1
+      // Если есть параметр subscribed от бота, обрабатываем его напрямую
+      if (isSubscribed !== null) {
+        console.log('[Payment] Bot subscription check result:', isSubscribed);
+        handleBotSubscriptionResult(isSubscribed);
+      } else {
+        // Иначе проверяем через API (для возврата с оплаты)
+        console.log('[Payment] Payment return detected, checking subscription and user status');
+        checkPaymentStatusAndShowModal(true).catch(err => {
+          console.error('[Payment] Error checking payment status:', err);
+          setShowPasswordSetup(true);
+        });
+      }
       
-      console.log('[Payment] Payment return detected, checking subscription and user status');
-      
-      // Проверяем статус оплаты, подписку и показываем соответствующий модал
-      checkPaymentStatusAndShowModal(shouldShowModal).catch(err => {
-        console.error('[Payment] Error checking payment status:', err);
-        // В случае ошибки показываем модалку пароля по умолчанию
-        setShowPasswordSetup(true);
-      }).finally(() => {
-        // Убираем параметр из URL, сохраняя hash для правильного роутинга
-        // Но делаем это с небольшой задержкой, чтобы проверка успела выполниться
-        setTimeout(() => {
-          try {
-            const newUrl = window.location.pathname + (window.location.hash || '#/payment');
-            safeHistoryReplace(newUrl);
-          } catch (e) {
-            console.error('Error replacing URL:', e);
-          } finally {
-            isProcessingPaymentRef.current = false;
-          }
-        }, 500);
-      });
+      // Очищаем URL после обработки
+      setTimeout(() => {
+        try {
+          const newUrl = window.location.pathname + (window.location.hash || '#/payment');
+          safeHistoryReplace(newUrl);
+        } catch (e) {
+          console.error('Error replacing URL:', e);
+        } finally {
+          isProcessingPaymentRef.current = false;
+        }
+      }, 500);
     }
   }, []);
 
@@ -176,6 +193,71 @@ const Payment: React.FC = () => {
       // При ошибке парсинга показываем модал для ввода пароля
       if (forceShow) {
         setShowPasswordSetup(true);
+      }
+    }
+  };
+
+  // Обрабатывает результат проверки подписки от бота
+  const handleBotSubscriptionResult = async (subscribed: boolean) => {
+    const token = localStorage.getItem('api_token');
+    if (!token) {
+      console.error('No auth token found');
+      if (subscribed) {
+        setShowPasswordSetup(true);
+      } else {
+        setShowPaymentRequired(true);
+      }
+      return;
+    }
+
+    // Получаем данные пользователя
+    try {
+      const userResponse = await safeFetch(apiUrl('/user'), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      }, 10000);
+
+      if (userResponse && userResponse.ok) {
+        const userData = await userResponse.json();
+        setUserId(userData.id);
+        setTelegramTag(userData.telegram_tag || null);
+
+        if (subscribed) {
+          // Пользователь подписан - показываем окно пароля или реферальную ссылку
+          console.log('[Payment] User is subscribed, showing password setup or referral link');
+          
+          if (userData.has_password) {
+            // Если пароль уже установлен - показываем Telegram модал с реферальной ссылкой
+            const apiBase = getApiBase();
+            const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
+            const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
+            setReferralLink(refLink);
+            setShowTelegramModal(true);
+          } else {
+            // Пароль не установлен - показываем модалку пароля
+            setShowPasswordSetup(true);
+          }
+        } else {
+          // Пользователь не подписан - показываем сообщение об оплате
+          console.log('[Payment] User is not subscribed, showing payment required message');
+          setShowPaymentRequired(true);
+        }
+      } else {
+        // Ошибка получения данных пользователя
+        if (subscribed) {
+          setShowPasswordSetup(true);
+        } else {
+          setShowPaymentRequired(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      if (subscribed) {
+        setShowPasswordSetup(true);
+      } else {
+        setShowPaymentRequired(true);
       }
     }
   };
@@ -384,6 +466,75 @@ const Payment: React.FC = () => {
             telegramTag={telegramTag}
           />
         )}
+        {showPaymentRequired && (
+          <PaymentRequiredModal
+            onClose={() => setShowPaymentRequired(false)}
+            onPayment={() => {
+              setShowPaymentRequired(false);
+              triggerPayment();
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Модальное окно для сообщения о необходимости оплаты
+const PaymentRequiredModal: React.FC<{ 
+  onClose: () => void; 
+  onPayment: () => void;
+}> = ({ onClose, onPayment }) => {
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl w-full max-w-md shadow-2xl border border-pink-500/30">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Требуется оплата</h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-700 rounded-full transition-colors duration-200"
+            >
+              <X size={24} className="text-gray-300" />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">💳</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                Вы не подписаны на группу
+              </h3>
+              <p className="text-gray-300 text-sm">
+                Для доступа к сообществу необходимо оплатить подписку
+              </p>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-4 border border-pink-500/20">
+              <p className="text-white text-sm mb-4">
+                После оплаты вы получите доступ к закрытому Telegram сообществу и сможете создать пароль для входа в личный кабинет.
+              </p>
+            </div>
+
+            <div className="text-center space-y-3">
+              <button
+                onClick={onPayment}
+                className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center space-x-2"
+              >
+                <span>Перейти к оплате</span>
+                <ExternalLink size={18} />
+              </button>
+              <button
+                onClick={onClose}
+                className="text-pink-400 hover:text-pink-300 text-sm underline"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

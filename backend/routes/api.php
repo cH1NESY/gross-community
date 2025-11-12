@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\EarningController;
 use App\Http\Controllers\Api\WithdrawalController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\TelegramBotController;
 
 Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
@@ -19,6 +20,9 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/consultation', [ConsultationController::class, 'requestConsultation']);
 Route::post('/check-subscription', [SubscriptionController::class, 'checkSubscription']);
+
+// Telegram Bot Webhook (публичный, без CSRF)
+Route::post('/telegram/webhook', [TelegramBotController::class, 'webhook']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);

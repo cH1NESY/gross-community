@@ -1,92 +1,33 @@
 import React, { useState } from 'react';
-import { apiUrl } from '../utils/apiBase';
-import { CheckCircle, XCircle, Loader, Send, ArrowRight } from 'lucide-react';
+import { ArrowRight, Send } from 'lucide-react';
 
 const CheckSubscription: React.FC = () => {
   const [username, setUsername] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{
-    subscribed: boolean;
-    message: string;
-    joinLink?: string;
-    botLink?: string;
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [botLink, setBotLink] = useState<string | null>(null);
+  const botLink = 'https://t.me/grosscbot';
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setResult(null);
-    setBotLink(null);
-
-    if (!username.trim()) {
-      setError('Введите ваш Telegram username');
-      return;
-    }
-
-    // Убираем @ если пользователь его ввел
-    const cleanUsername = username.trim().replace(/^@/, '');
-
-    if (!/^[a-zA-Z0-9_]{5,32}$/.test(cleanUsername)) {
-      setError('Некорректный формат username. Используйте только буквы, цифры и подчеркивание');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch(apiUrl('/check-subscription'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ telegram_username: cleanUsername }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setError(data.message || 'Ошибка при проверке подписки');
-        if (data?.bot_link) {
-          setBotLink(data.bot_link);
-        }
-        if (data?.join_link) {
-          setResult({
-            subscribed: false,
-            message: data.message || '',
-            joinLink: data.join_link,
-            botLink: data.bot_link,
-          });
-        }
-        setLoading(false);
-        return;
-      }
-
-      setResult({
-        subscribed: Boolean(data.subscribed),
-        message: data.message || '',
-        joinLink: data.join_link,
-        botLink: data.bot_link,
-      });
-      if (data?.bot_link) {
-        setBotLink(data.bot_link);
-      }
-    } catch (err) {
-      console.error('Error checking subscription:', err);
-      setError('Ошибка сети. Проверьте подключение к интернету.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleJoinTelegram = (link?: string) => {
-    window.open(link || 'https://t.me/+tTW-bBfMvyI0ZTE1', '_blank');
-  };
-
-  const handleOpenBot = (link?: string) => {
-    window.open(link || 'https://t.me/grosscbot', '_blank');
+  const handleCheckSubscription = () => {
+    // Формируем URL для возврата на сайт после проверки
+    // Бот должен проверить подписку и вернуть пользователя на сайт с параметрами:
+    // - subscribed=1 если подписан
+    // - subscribed=0 если не подписан
+    const returnUrl = `${window.location.origin}/?success=1#/payment`;
+    
+    // Кодируем URL для передачи в параметре start
+    // Формат: /start check_<url>
+    // Используем encodeURIComponent для безопасной передачи URL
+    const encodedUrl = encodeURIComponent(returnUrl);
+    
+    // Открываем бота с параметром для возврата
+    // Telegram автоматически заменит некоторые символы в URL, поэтому кодируем полностью
+    const botUrl = `${botLink}?start=check_${encodedUrl}`;
+    
+    console.log('Opening bot with URL:', {
+      returnUrl,
+      encodedUrl,
+      botUrl
+    });
+    
+    window.open(botUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -102,15 +43,15 @@ const CheckSubscription: React.FC = () => {
               Проверка подписки
             </h1>
             <p className="text-gray-300 text-sm sm:text-base">
-              Введите ваш Telegram username (без @), чтобы проверить, подписаны ли вы на наше закрытое сообщество
+              Нажмите кнопку ниже, чтобы открыть бота и проверить подписку на наше закрытое сообщество
             </p>
           </div>
 
           {/* Форма */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-6">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-pink-200 mb-2">
-                Telegram Username
+                Telegram Username <span className="text-gray-400 text-xs">(необязательно)</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -121,118 +62,41 @@ const CheckSubscription: React.FC = () => {
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="ваш_username"
+                  placeholder="ваш_username (необязательно)"
                   className="w-full pl-8 pr-4 py-3 bg-gray-800/50 border border-pink-500/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
-                  disabled={loading}
                 />
               </div>
-              {error && (
-                <div className="mt-2 space-y-3">
-                  <p className="text-sm text-red-400 flex items-center gap-2">
-                    <XCircle className="w-4 h-4" />
-                    {error}
-                  </p>
-                  {botLink && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenBot(botLink)}
-                      className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                    >
-                      <Send className="w-4 h-4" />
-                      Открыть бота и нажать «Start»
-                    </button>
-                  )}
-                </div>
-              )}
+              <p className="mt-2 text-xs text-gray-400">
+                Username необязателен. Бот автоматически определит ваш профиль после нажатия «Start».
+              </p>
             </div>
 
             <button
-              type="submit"
-              disabled={loading || !username.trim()}
-              className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 disabled:from-gray-500 disabled:to-gray-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+              type="button"
+              onClick={handleCheckSubscription}
+              className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <>
-                  <Loader className="w-5 h-5 animate-spin" />
-                  <span>Проверка...</span>
-                </>
-              ) : (
-                <>
-                  <span>Проверить подписку</span>
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
+              <span>Проверить подписку через бота</span>
+              <ArrowRight className="w-5 h-5" />
             </button>
-          </form>
-
-          {/* Результат проверки */}
-          {result && (
-            <div className={`mt-8 p-6 rounded-lg border ${
-              result.subscribed 
-                ? 'bg-green-900/30 border-green-500/30' 
-                : 'bg-red-900/30 border-red-500/30'
-            }`}>
-              <div className="flex items-start gap-4">
-                {result.subscribed ? (
-                  <CheckCircle className="w-8 h-8 text-green-400 flex-shrink-0 mt-1" />
-                ) : (
-                  <XCircle className="w-8 h-8 text-red-400 flex-shrink-0 mt-1" />
-                )}
-                <div className="flex-1">
-                  <h3 className={`text-lg font-semibold mb-2 ${
-                    result.subscribed ? 'text-green-300' : 'text-red-300'
-                  }`}>
-                    {result.subscribed ? 'Подписка подтверждена!' : 'Подписка не найдена'}
-                  </h3>
-                  <p className="text-gray-300 text-sm mb-4">
-                    {result.message || (
-                      result.subscribed 
-                        ? 'Вы успешно подписаны на наше сообщество. Добро пожаловать!'
-                        : 'Вы не подписаны на наше Telegram сообщество. Пожалуйста, присоединитесь для получения доступа.'
-                    )}
-                  </p>
-                  {!result.subscribed && (
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <button
-                        onClick={() => handleJoinTelegram(result.joinLink)}
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 justify-center"
-                      >
-                        <span>Присоединиться к сообществу</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                      {(result.botLink || botLink) && (
-                        <button
-                          onClick={() => handleOpenBot(result.botLink || botLink || undefined)}
-                          className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 justify-center"
-                        >
-                          <span>Открыть бота</span>
-                          <Send className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
 
           {/* Информационный блок */}
           <div className="mt-8 p-4 bg-gradient-to-br from-pink-900/20 to-purple-900/20 rounded-lg border border-pink-500/20">
             <p className="text-sm text-gray-300 text-center space-y-2">
               <span className="block">
-                <span className="text-pink-300 font-medium">Важно:</span> Перед проверкой подпишитесь на нашего бота{' '}
+                <span className="text-pink-300 font-medium">Как это работает:</span> Нажмите кнопку выше, чтобы открыть бота{' '}
                 <button
                   type="button"
-                  onClick={() => handleOpenBot(botLink || result?.botLink)}
+                  onClick={() => window.open(botLink, '_blank', 'noopener,noreferrer')}
                   className="text-pink-200 underline hover:text-pink-100 transition-colors"
                 >
                   @grosscbot
-                </button>{' '}
-                и нажмите «Start», чтобы предоставить доступ к вашему профилю.
+                </button>
+                . Бот проверит вашу подписку и вернет вас на сайт с результатом.
               </span>
               <span className="block">
-                Для проверки подписки профиль должен быть <span className="text-pink-200">публичным</span>
-                (Settings → Privacy → Profile Photos → Everybody). Проверка выполняется в реальном времени через Telegram API.
+                После проверки вы будете перенаправлены обратно на сайт. Если вы подписаны, вам будет предложено создать пароль и получить реферальную ссылку.
               </span>
             </p>
           </div>
