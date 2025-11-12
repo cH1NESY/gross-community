@@ -35,6 +35,13 @@ class TelegramBotController extends Controller
     {
         // ВАЖНО: Всегда возвращаем 200 OK, чтобы Telegram не считал webhook нерабочим
         
+        // Логируем запрос в файл напрямую для отладки
+        file_put_contents(
+            storage_path('logs/telegram-webhook.log'),
+            date('Y-m-d H:i:s') . ' - Webhook received' . PHP_EOL,
+            FILE_APPEND
+        );
+        
         // Быстрый ответ - сразу возвращаем успех
         // Обработку выполняем после, чтобы не блокировать ответ
         
@@ -44,23 +51,32 @@ class TelegramBotController extends Controller
         try {
             // Проверяем, что токен настроен
             if (empty($this->botToken)) {
-                // Логируем только если можем
-                try {
-                    Log::error('TELEGRAM_BOT_TOKEN not configured in webhook');
-                } catch (\Throwable $logError) {
-                    error_log('TELEGRAM_BOT_TOKEN not configured');
-                }
+                file_put_contents(
+                    storage_path('logs/telegram-webhook.log'),
+                    date('Y-m-d H:i:s') . ' - ERROR: Bot token not configured' . PHP_EOL,
+                    FILE_APPEND
+                );
                 return $response;
             }
             
             $update = $request->all();
+            
+            // Логируем получение обновления в файл
+            file_put_contents(
+                storage_path('logs/telegram-webhook.log'),
+                date('Y-m-d H:i:s') . ' - Update received: update_id=' . ($update['update_id'] ?? 'null') . 
+                ', has_message=' . (isset($update['message']) ? 'yes' : 'no') . 
+                ', has_callback_query=' . (isset($update['callback_query']) ? 'yes' : 'no') . PHP_EOL,
+                FILE_APPEND
+            );
             
             // Логируем получение обновления (безопасно)
             try {
                 Log::info('Telegram webhook received', [
                     'update_id' => $update['update_id'] ?? null,
                     'has_message' => isset($update['message']),
-                    'has_callback_query' => isset($update['callback_query'])
+                    'has_callback_query' => isset($update['callback_query']),
+                    'message_text' => $update['message']['text'] ?? null
                 ]);
             } catch (\Throwable $logError) {
                 // Если логирование не работает, просто продолжаем
@@ -69,12 +85,33 @@ class TelegramBotController extends Controller
             // Обработка сообщений
             if (isset($update['message'])) {
                 try {
+                    file_put_contents(
+                        storage_path('logs/telegram-webhook.log'),
+                        date('Y-m-d H:i:s') . ' - Processing message: text=' . ($update['message']['text'] ?? 'null') . 
+                        ', chat_id=' . ($update['message']['chat']['id'] ?? 'null') . PHP_EOL,
+                        FILE_APPEND
+                    );
+                    
                     $this->handleMessage($update['message']);
+                    
+                    file_put_contents(
+                        storage_path('logs/telegram-webhook.log'),
+                        date('Y-m-d H:i:s') . ' - Message processed successfully' . PHP_EOL,
+                        FILE_APPEND
+                    );
                 } catch (\Throwable $e) {
+                    file_put_contents(
+                        storage_path('logs/telegram-webhook.log'),
+                        date('Y-m-d H:i:s') . ' - ERROR handling message: ' . $e->getMessage() . 
+                        ' in ' . $e->getFile() . ':' . $e->getLine() . PHP_EOL,
+                        FILE_APPEND
+                    );
+                    
                     try {
                         Log::error('Error handling message', [
                             'error' => $e->getMessage(),
-                            'line' => $e->getLine()
+                            'line' => $e->getLine(),
+                            'file' => $e->getFile()
                         ]);
                     } catch (\Throwable $logError) {
                         error_log('Error handling message: ' . $e->getMessage());
@@ -85,12 +122,32 @@ class TelegramBotController extends Controller
             // Обработка callback запросов (нажатие на кнопку)
             if (isset($update['callback_query'])) {
                 try {
+                    file_put_contents(
+                        storage_path('logs/telegram-webhook.log'),
+                        date('Y-m-d H:i:s') . ' - Processing callback query: data=' . ($update['callback_query']['data'] ?? 'null') . PHP_EOL,
+                        FILE_APPEND
+                    );
+                    
                     $this->handleCallbackQuery($update['callback_query']);
+                    
+                    file_put_contents(
+                        storage_path('logs/telegram-webhook.log'),
+                        date('Y-m-d H:i:s') . ' - Callback query processed successfully' . PHP_EOL,
+                        FILE_APPEND
+                    );
                 } catch (\Throwable $e) {
+                    file_put_contents(
+                        storage_path('logs/telegram-webhook.log'),
+                        date('Y-m-d H:i:s') . ' - ERROR handling callback query: ' . $e->getMessage() . 
+                        ' in ' . $e->getFile() . ':' . $e->getLine() . PHP_EOL,
+                        FILE_APPEND
+                    );
+                    
                     try {
                         Log::error('Error handling callback query', [
                             'error' => $e->getMessage(),
-                            'line' => $e->getLine()
+                            'line' => $e->getLine(),
+                            'file' => $e->getFile()
                         ]);
                     } catch (\Throwable $logError) {
                         error_log('Error handling callback query: ' . $e->getMessage());
@@ -100,6 +157,13 @@ class TelegramBotController extends Controller
             
         } catch (\Throwable $e) {
             // Ловим все исключения
+            file_put_contents(
+                storage_path('logs/telegram-webhook.log'),
+                date('Y-m-d H:i:s') . ' - FATAL ERROR: ' . $e->getMessage() . 
+                ' in ' . $e->getFile() . ':' . $e->getLine() . PHP_EOL,
+                FILE_APPEND
+            );
+            
             try {
                 Log::error('Fatal error in Telegram webhook', [
                     'error' => $e->getMessage(),
@@ -411,7 +475,19 @@ class TelegramBotController extends Controller
         $message = "👋 Привет! Я бот для проверки подписки на сообщество GROSS Community.\n\n" .
                    "Используйте команду /start check_<url> для проверки подписки.";
         
-        $this->sendMessage($chatId, $message);
+        file_put_contents(
+            storage_path('logs/telegram-webhook.log'),
+            date('Y-m-d H:i:s') . ' - Sending welcome message to chat_id=' . $chatId . PHP_EOL,
+            FILE_APPEND
+        );
+        
+        $result = $this->sendMessage($chatId, $message);
+        
+        file_put_contents(
+            storage_path('logs/telegram-webhook.log'),
+            date('Y-m-d H:i:s') . ' - Welcome message sent: ' . ($result ? 'success' : 'failed') . PHP_EOL,
+            FILE_APPEND
+        );
     }
 
     /**
@@ -480,9 +556,24 @@ class TelegramBotController extends Controller
                 // Если логирование не работает, просто продолжаем
             }
             
+            // Логируем успешную отправку в файл
+            file_put_contents(
+                storage_path('logs/telegram-webhook.log'),
+                date('Y-m-d H:i:s') . ' - Message sent successfully: chat_id=' . $chatId . 
+                ', message_id=' . ($data['result']['message_id'] ?? 'null') . PHP_EOL,
+                FILE_APPEND
+            );
+            
             return true;
 
         } catch (GuzzleException $e) {
+            file_put_contents(
+                storage_path('logs/telegram-webhook.log'),
+                date('Y-m-d H:i:s') . ' - ERROR sending message (Guzzle): ' . $e->getMessage() . 
+                ', chat_id=' . $chatId . PHP_EOL,
+                FILE_APPEND
+            );
+            
             try {
                 Log::error('Guzzle error sending Telegram message', [
                     'error' => $e->getMessage(),
@@ -493,6 +584,13 @@ class TelegramBotController extends Controller
             }
             return false;
         } catch (\Throwable $e) {
+            file_put_contents(
+                storage_path('logs/telegram-webhook.log'),
+                date('Y-m-d H:i:s') . ' - ERROR sending message (Unexpected): ' . $e->getMessage() . 
+                ', chat_id=' . $chatId . ', file=' . $e->getFile() . ':' . $e->getLine() . PHP_EOL,
+                FILE_APPEND
+            );
+            
             try {
                 Log::error('Unexpected error sending Telegram message', [
                     'error' => $e->getMessage(),
