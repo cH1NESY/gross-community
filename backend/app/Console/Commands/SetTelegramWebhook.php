@@ -69,6 +69,12 @@ class SetTelegramWebhook extends Command
                 if (isset($data['result']['url'])) {
                     $this->info("Webhook URL: {$data['result']['url']}");
                 }
+                if (isset($data['result']['pending_update_count'])) {
+                    $this->info("Pending updates: {$data['result']['pending_update_count']}");
+                }
+                $this->info('');
+                $this->info('⚠️ Важно: Если вы использовали Unisender, отключите webhook там!');
+                $this->info('Только один webhook может быть активен - либо Unisender, либо Laravel.');
                 return 0;
             } else {
                 $this->error('Failed to set webhook: ' . ($data['description'] ?? 'Unknown error'));

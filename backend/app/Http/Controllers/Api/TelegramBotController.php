@@ -20,7 +20,18 @@ class TelegramBotController extends Controller
     {
         $this->botToken = env('TELEGRAM_BOT_TOKEN');
         $this->chatId = env('TELEGRAM_CHAT_ID');
-        $this->apiUrl = 'https://api.telegram.org/bot' . $this->botToken . '/';
+        
+        if (!$this->botToken) {
+            Log::error('TELEGRAM_BOT_TOKEN not configured in .env');
+        }
+        
+        if (!$this->chatId) {
+            Log::error('TELEGRAM_CHAT_ID not configured in .env');
+        }
+        
+        if ($this->botToken) {
+            $this->apiUrl = 'https://api.telegram.org/bot' . $this->botToken . '/';
+        }
     }
 
     /**
@@ -29,26 +40,54 @@ class TelegramBotController extends Controller
     public function webhook(Request $request): JsonResponse
     {
         try {
+            // Проверяем, что токен настроен
+            if (!$this->botToken) {
+                Log::error('TELEGRAM_BOT_TOKEN not configured');
+                return response()->json(['ok' => false, 'error' => 'Bot token not configured'], 500);
+            }
+            
             $update = $request->all();
-            Log::info('Telegram webhook received', ['update' => $update]);
+            Log::info('Telegram webhook received', [
+                'update_id' => $update['update_id'] ?? null,
+                'has_message' => isset($update['message']),
+                'has_callback_query' => isset($update['callback_query'])
+            ]);
 
             // Обработка сообщений
             if (isset($update['message'])) {
-                $this->handleMessage($update['message']);
+                try {
+                    $this->handleMessage($update['message']);
+                } catch (\Exception $e) {
+                    Log::error('Error handling message', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                        'message' => $update['message']
+                    ]);
+                }
             }
 
             // Обработка callback запросов (нажатие на кнопку)
             if (isset($update['callback_query'])) {
-                $this->handleCallbackQuery($update['callback_query']);
+                try {
+                    $this->handleCallbackQuery($update['callback_query']);
+                } catch (\Exception $e) {
+                    Log::error('Error handling callback query', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                        'callback_query' => $update['callback_query']
+                    ]);
+                }
             }
 
             return response()->json(['ok' => true]);
         } catch (\Exception $e) {
             Log::error('Error processing Telegram webhook', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
             ]);
-            return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
+            // Всегда возвращаем 200, чтобы Telegram не считал webhook нерабочим
+            return response()->json(['ok' => false, 'error' => $e->getMessage()]);
         }
     }
 
@@ -301,14 +340,6 @@ class TelegramBotController extends Controller
      */
     private function sendSubscriptionResult(int $chatId, bool $isSubscribed, string $returnUrl): void
     {
-        if ($isSubscribed) {
-            $message = "✅ Вы подписаны! Вернитесь на сайт.";
-            $subscribedParam = '1';
-        } else {
-            $message = "❌ Вы не подписаны, вам необходимо подписаться!";
-            $subscribedParam = '0';
-        }
-
         // Формируем URL для возврата на сайт
         // returnUrl уже содержит ?success=1#/payment, нужно добавить subscribed параметр
         $returnUrlParsed = parse_url($returnUrl);
@@ -324,7 +355,7 @@ class TelegramBotController extends Controller
             parse_str($query, $params);
         }
         $params['success'] = '1';
-        $params['subscribed'] = $subscribedParam;
+        $params['subscribed'] = $isSubscribed ? '1' : '0';
         
         $newQuery = http_build_query($params);
         
@@ -337,19 +368,33 @@ class TelegramBotController extends Controller
             $redirectUrl .= '#' . $fragment;
         }
 
-        // Создаем кнопку для возврата на сайт
-        $keyboard = [
-            'inline_keyboard' => [
-                [
+        // Настройка: показывать ли кнопки (можно настроить через .env)
+        $showButtons = env('TELEGRAM_SHOW_BUTTONS', true);
+
+        if ($isSubscribed) {
+            $message = "✅ Вы подписаны! Вернитесь на сайт.";
+        } else {
+            $message = "❌ Вы не подписаны, вам необходимо подписаться!";
+        }
+
+        // Если кнопки включены, добавляем их
+        if ($showButtons) {
+            $keyboard = [
+                'inline_keyboard' => [
                     [
-                        'text' => $isSubscribed ? 'Вернуться на сайт' : 'Перейти на сайт',
-                        'url' => $redirectUrl
+                        [
+                            'text' => $isSubscribed ? 'Вернуться на сайт' : 'Перейти на сайт',
+                            'url' => $redirectUrl
+                        ]
                     ]
                 ]
-            ]
-        ];
-
-        $this->sendMessage($chatId, $message, $keyboard);
+            ];
+            $this->sendMessage($chatId, $message, $keyboard);
+        } else {
+            // Если кнопки отключены, отправляем только текст с URL в сообщении
+            $messageWithUrl = $message . "\n\n" . $redirectUrl;
+            $this->sendMessage($chatId, $messageWithUrl);
+        }
     }
 
     /**
@@ -365,9 +410,14 @@ class TelegramBotController extends Controller
     /**
      * Отправка сообщения в Telegram
      */
-    private function sendMessage(int $chatId, string $text, ?array $replyMarkup = null): void
+    private function sendMessage(int $chatId, string $text, ?array $replyMarkup = null): bool
     {
         try {
+            if (!$this->botToken) {
+                Log::error('Cannot send message: TELEGRAM_BOT_TOKEN not configured');
+                return false;
+            }
+            
             $client = new Client(['base_uri' => $this->apiUrl]);
 
             $params = [
@@ -380,16 +430,43 @@ class TelegramBotController extends Controller
                 $params['reply_markup'] = json_encode($replyMarkup);
             }
 
-            $client->post('sendMessage', [
+            $response = $client->post('sendMessage', [
                 'form_params' => $params,
                 'http_errors' => false,
             ]);
+
+            $data = json_decode((string) $response->getBody(), true);
+            
+            if (!$data['ok']) {
+                Log::error('Telegram API error when sending message', [
+                    'error' => $data['description'] ?? 'Unknown error',
+                    'chat_id' => $chatId,
+                    'error_code' => $data['error_code'] ?? null
+                ]);
+                return false;
+            }
+            
+            Log::info('Message sent successfully', [
+                'chat_id' => $chatId,
+                'message_id' => $data['result']['message_id'] ?? null
+            ]);
+            
+            return true;
 
         } catch (GuzzleException $e) {
             Log::error('Error sending Telegram message', [
                 'error' => $e->getMessage(),
                 'chat_id' => $chatId,
+                'trace' => $e->getTraceAsString()
             ]);
+            return false;
+        } catch (\Exception $e) {
+            Log::error('Unexpected error sending Telegram message', [
+                'error' => $e->getMessage(),
+                'chat_id' => $chatId,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return false;
         }
     }
 
