@@ -18,18 +18,12 @@ class TelegramBotController extends Controller
 
     public function __construct()
     {
-        $this->botToken = env('TELEGRAM_BOT_TOKEN');
-        $this->chatId = env('TELEGRAM_CHAT_ID');
+        // Минимальная инициализация без логирования, чтобы избежать ошибок при инициализации
+        // Используем env() напрямую, так как config() может быть закеширован
+        $this->botToken = env('TELEGRAM_BOT_TOKEN') ?: getenv('TELEGRAM_BOT_TOKEN') ?: null;
+        $this->chatId = env('TELEGRAM_CHAT_ID') ?: getenv('TELEGRAM_CHAT_ID') ?: null;
         
-        if (!$this->botToken) {
-            Log::error('TELEGRAM_BOT_TOKEN not configured in .env');
-        }
-        
-        if (!$this->chatId) {
-            Log::error('TELEGRAM_CHAT_ID not configured in .env');
-        }
-        
-        if ($this->botToken) {
+        if ($this->botToken && is_string($this->botToken) && !empty($this->botToken)) {
             $this->apiUrl = 'https://api.telegram.org/bot' . $this->botToken . '/';
         }
     }
@@ -39,30 +33,52 @@ class TelegramBotController extends Controller
      */
     public function webhook(Request $request): JsonResponse
     {
+        // ВАЖНО: Всегда возвращаем 200 OK, чтобы Telegram не считал webhook нерабочим
+        
+        // Быстрый ответ - сразу возвращаем успех
+        // Обработку выполняем после, чтобы не блокировать ответ
+        
+        $response = response()->json(['ok' => true]);
+        
+        // Обрабатываем обновление асинхронно (не блокируем ответ)
         try {
             // Проверяем, что токен настроен
-            if (!$this->botToken) {
-                Log::error('TELEGRAM_BOT_TOKEN not configured');
-                return response()->json(['ok' => false, 'error' => 'Bot token not configured'], 500);
+            if (empty($this->botToken)) {
+                // Логируем только если можем
+                try {
+                    Log::error('TELEGRAM_BOT_TOKEN not configured in webhook');
+                } catch (\Throwable $logError) {
+                    error_log('TELEGRAM_BOT_TOKEN not configured');
+                }
+                return $response;
             }
             
             $update = $request->all();
-            Log::info('Telegram webhook received', [
-                'update_id' => $update['update_id'] ?? null,
-                'has_message' => isset($update['message']),
-                'has_callback_query' => isset($update['callback_query'])
-            ]);
+            
+            // Логируем получение обновления (безопасно)
+            try {
+                Log::info('Telegram webhook received', [
+                    'update_id' => $update['update_id'] ?? null,
+                    'has_message' => isset($update['message']),
+                    'has_callback_query' => isset($update['callback_query'])
+                ]);
+            } catch (\Throwable $logError) {
+                // Если логирование не работает, просто продолжаем
+            }
 
             // Обработка сообщений
             if (isset($update['message'])) {
                 try {
                     $this->handleMessage($update['message']);
-                } catch (\Exception $e) {
-                    Log::error('Error handling message', [
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
-                        'message' => $update['message']
-                    ]);
+                } catch (\Throwable $e) {
+                    try {
+                        Log::error('Error handling message', [
+                            'error' => $e->getMessage(),
+                            'line' => $e->getLine()
+                        ]);
+                    } catch (\Throwable $logError) {
+                        error_log('Error handling message: ' . $e->getMessage());
+                    }
                 }
             }
 
@@ -70,25 +86,33 @@ class TelegramBotController extends Controller
             if (isset($update['callback_query'])) {
                 try {
                     $this->handleCallbackQuery($update['callback_query']);
-                } catch (\Exception $e) {
-                    Log::error('Error handling callback query', [
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
-                        'callback_query' => $update['callback_query']
-                    ]);
+                } catch (\Throwable $e) {
+                    try {
+                        Log::error('Error handling callback query', [
+                            'error' => $e->getMessage(),
+                            'line' => $e->getLine()
+                        ]);
+                    } catch (\Throwable $logError) {
+                        error_log('Error handling callback query: ' . $e->getMessage());
+                    }
                 }
             }
-
-            return response()->json(['ok' => true]);
-        } catch (\Exception $e) {
-            Log::error('Error processing Telegram webhook', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all()
-            ]);
-            // Всегда возвращаем 200, чтобы Telegram не считал webhook нерабочим
-            return response()->json(['ok' => false, 'error' => $e->getMessage()]);
+            
+        } catch (\Throwable $e) {
+            // Ловим все исключения
+            try {
+                Log::error('Fatal error in Telegram webhook', [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]);
+            } catch (\Throwable $logError) {
+                error_log('Fatal error in Telegram webhook: ' . $e->getMessage());
+            }
         }
+        
+        // Всегда возвращаем успех
+        return $response;
     }
 
     /**
@@ -165,20 +189,25 @@ class TelegramBotController extends Controller
     private function sendMenuWithCheckButton(int $chatId, string $returnUrl): void
     {
         if (empty($returnUrl)) {
-            Log::warning('Empty return URL in sendMenuWithCheckButton');
             $this->sendMessage($chatId, "❌ Ошибка: не удалось получить URL для возврата.");
             return;
         }
 
         $message = "Проверим вашу подписку";
 
-        // Сохраняем return_url в сессии пользователя (используем chat_id как ключ)
-        // В реальном приложении лучше использовать Redis или базу данных
-        // Для простоты сохраняем в файл или используем короткий идентификатор
+        // Сохраняем return_url в кеше Laravel для временного хранения (TTL 10 минут)
         $sessionKey = 'bot_return_url_' . $chatId;
         
-        // Используем кеш Laravel для временного хранения (TTL 10 минут)
-        Cache::put($sessionKey, $returnUrl, 600);
+        try {
+            Cache::put($sessionKey, $returnUrl, 600);
+        } catch (\Throwable $e) {
+            // Если кеш не работает, просто продолжаем
+            try {
+                Log::warning('Failed to save return URL in cache', ['error' => $e->getMessage()]);
+            } catch (\Throwable $logError) {
+                // Если логирование не работает, продолжаем
+            }
+        }
         
         // Используем короткий callback_data с chat_id
         $callbackData = 'check_' . $chatId;
@@ -195,12 +224,6 @@ class TelegramBotController extends Controller
         ];
 
         $this->sendMessage($chatId, $message, $keyboard);
-        
-        Log::info('Sent menu with check button', [
-            'chat_id' => $chatId,
-            'return_url' => $returnUrl,
-            'callback_data' => $callbackData
-        ]);
     }
 
     /**
@@ -208,53 +231,43 @@ class TelegramBotController extends Controller
      */
     private function handleCallbackQuery(array $callbackQuery): void
     {
-        $callbackId = $callbackQuery['id'];
-        $chatId = $callbackQuery['message']['chat']['id'];
-        $userId = $callbackQuery['from']['id'];
+        $callbackId = $callbackQuery['id'] ?? null;
+        $chatId = $callbackQuery['message']['chat']['id'] ?? null;
+        $userId = $callbackQuery['from']['id'] ?? null;
         $data = $callbackQuery['data'] ?? '';
+
+        if (!$callbackId || !$chatId || !$userId) {
+            return;
+        }
 
         // Подтверждаем получение callback
         $this->answerCallbackQuery($callbackId, "Проверяем подписку...");
 
         // Обработка проверки подписки
-        // Формат: check_<chat_id> или check_subscription_<encoded_url>
-        if (strpos($data, 'check_') === 0) {
-            // Новый формат: check_<chat_id> (используем кеш)
-            if (preg_match('/^check_(\d+)$/', $data, $matches)) {
-                $sessionChatId = (int) $matches[1];
-                $sessionKey = 'bot_return_url_' . $sessionChatId;
+        // Формат: check_<chat_id>
+        if (strpos($data, 'check_') === 0 && preg_match('/^check_(\d+)$/', $data, $matches)) {
+            $sessionChatId = (int) $matches[1];
+            $sessionKey = 'bot_return_url_' . $sessionChatId;
+            
+            try {
                 $returnUrl = Cache::get($sessionKey);
-                
-                if (empty($returnUrl)) {
-                    Log::warning('Return URL not found in cache', [
-                        'chat_id' => $sessionChatId,
-                        'callback_data' => $data
-                    ]);
-                    $this->sendMessage($chatId, "❌ Ошибка: сессия истекла. Пожалуйста, начните проверку заново.");
-                    return;
-                }
-                
-                // Удаляем из кеша после использования
-                Cache::forget($sessionKey);
-                
-                $this->processSubscriptionCheck($chatId, $userId, $returnUrl);
-            } 
-            // Старый формат: check_subscription_<encoded_url> (для обратной совместимости)
-            elseif (strpos($data, 'check_subscription_') === 0) {
-                $encodedUrl = substr($data, 19);
-                $returnUrl = base64_decode($encodedUrl);
-                
-                if ($returnUrl === false || empty($returnUrl)) {
-                    Log::warning('Failed to decode return URL', [
-                        'encoded_url' => $encodedUrl,
-                        'data' => $data
-                    ]);
-                    $this->sendMessage($chatId, "❌ Ошибка: не удалось получить URL для возврата.");
-                    return;
-                }
-                
-                $this->processSubscriptionCheck($chatId, $userId, $returnUrl);
+            } catch (\Throwable $e) {
+                $returnUrl = null;
             }
+            
+            if (empty($returnUrl)) {
+                $this->sendMessage($chatId, "❌ Ошибка: сессия истекла. Пожалуйста, начните проверку заново.");
+                return;
+            }
+            
+            // Удаляем из кеша после использования
+            try {
+                Cache::forget($sessionKey);
+            } catch (\Throwable $e) {
+                // Если не удалось удалить из кеша, продолжаем
+            }
+            
+            $this->processSubscriptionCheck($chatId, $userId, $returnUrl);
         }
     }
 
@@ -263,31 +276,24 @@ class TelegramBotController extends Controller
      */
     private function processSubscriptionCheck(int $chatId, int $userId, string $returnUrl): void
     {
-        try {
-            // Шаг 1: Отправляем сообщение "Идет проверка"
-            $this->sendMessage($chatId, "⏳ Идет проверка...");
+        // Шаг 1: Отправляем сообщение "Идет проверка"
+        $this->sendMessage($chatId, "⏳ Идет проверка...");
 
-            // Шаг 2: Задержка 20 секунд (как в сценарии бота)
-            // Можно настроить в .env через TELEGRAM_CHECK_DELAY (по умолчанию 20)
-            $delaySeconds = (int) env('TELEGRAM_CHECK_DELAY', 20);
+        // Шаг 2: Задержка 20 секунд (как в сценарии бота)
+        // Можно настроить в .env через TELEGRAM_CHECK_DELAY (по умолчанию 20)
+        $delaySeconds = (int) env('TELEGRAM_CHECK_DELAY', 20);
+        if ($delaySeconds > 0 && $delaySeconds < 60) {
             sleep($delaySeconds);
+        }
 
-            // Шаг 3: Проверяем подписку
-            $isSubscribed = $this->checkUserSubscription($userId);
+        // Шаг 3: Проверяем подписку
+        $isSubscribed = $this->checkUserSubscription($userId);
 
-            // Шаг 4: Отправляем результат с кнопкой для возврата на сайт
-            if ($isSubscribed) {
-                $this->sendSubscriptionResult($chatId, true, $returnUrl);
-            } else {
-                $this->sendSubscriptionResult($chatId, false, $returnUrl);
-            }
-        } catch (\Exception $e) {
-            Log::error('Error processing subscription check', [
-                'error' => $e->getMessage(),
-                'chat_id' => $chatId,
-                'user_id' => $userId,
-            ]);
-            $this->sendMessage($chatId, "❌ Произошла ошибка при проверке подписки. Пожалуйста, попробуйте позже.");
+        // Шаг 4: Отправляем результат с кнопкой для возврата на сайт
+        if ($isSubscribed) {
+            $this->sendSubscriptionResult($chatId, true, $returnUrl);
+        } else {
+            $this->sendSubscriptionResult($chatId, false, $returnUrl);
         }
     }
 
@@ -404,6 +410,7 @@ class TelegramBotController extends Controller
     {
         $message = "👋 Привет! Я бот для проверки подписки на сообщество GROSS Community.\n\n" .
                    "Используйте команду /start check_<url> для проверки подписки.";
+        
         $this->sendMessage($chatId, $message);
     }
 
@@ -413,18 +420,30 @@ class TelegramBotController extends Controller
     private function sendMessage(int $chatId, string $text, ?array $replyMarkup = null): bool
     {
         try {
-            if (!$this->botToken) {
-                Log::error('Cannot send message: TELEGRAM_BOT_TOKEN not configured');
+            if (empty($this->botToken) || empty($this->apiUrl)) {
+                try {
+                    Log::error('Cannot send message: TELEGRAM_BOT_TOKEN not configured');
+                } catch (\Throwable $e) {
+                    error_log('Cannot send message: TELEGRAM_BOT_TOKEN not configured');
+                }
                 return false;
             }
             
-            $client = new Client(['base_uri' => $this->apiUrl]);
+            $client = new Client([
+                'base_uri' => $this->apiUrl,
+                'timeout' => 10,
+                'connect_timeout' => 5
+            ]);
 
             $params = [
                 'chat_id' => $chatId,
-                'text' => $text,
-                'parse_mode' => 'HTML'
+                'text' => $text
             ];
+
+            // Используем HTML parse mode только если текст содержит HTML теги
+            if (strip_tags($text) !== $text) {
+                $params['parse_mode'] = 'HTML';
+            }
 
             if ($replyMarkup) {
                 $params['reply_markup'] = json_encode($replyMarkup);
@@ -435,37 +454,55 @@ class TelegramBotController extends Controller
                 'http_errors' => false,
             ]);
 
-            $data = json_decode((string) $response->getBody(), true);
+            $responseBody = (string) $response->getBody();
+            $data = json_decode($responseBody, true);
             
-            if (!$data['ok']) {
-                Log::error('Telegram API error when sending message', [
-                    'error' => $data['description'] ?? 'Unknown error',
-                    'chat_id' => $chatId,
-                    'error_code' => $data['error_code'] ?? null
-                ]);
+            if (!is_array($data) || !isset($data['ok']) || !$data['ok']) {
+                try {
+                    Log::error('Telegram API error when sending message', [
+                        'error' => $data['description'] ?? 'Unknown error',
+                        'chat_id' => $chatId,
+                        'error_code' => $data['error_code'] ?? null,
+                        'response' => $responseBody
+                    ]);
+                } catch (\Throwable $e) {
+                    error_log('Telegram API error: ' . ($data['description'] ?? 'Unknown error'));
+                }
                 return false;
             }
             
-            Log::info('Message sent successfully', [
-                'chat_id' => $chatId,
-                'message_id' => $data['result']['message_id'] ?? null
-            ]);
+            try {
+                Log::info('Message sent successfully', [
+                    'chat_id' => $chatId,
+                    'message_id' => $data['result']['message_id'] ?? null
+                ]);
+            } catch (\Throwable $e) {
+                // Если логирование не работает, просто продолжаем
+            }
             
             return true;
 
         } catch (GuzzleException $e) {
-            Log::error('Error sending Telegram message', [
-                'error' => $e->getMessage(),
-                'chat_id' => $chatId,
-                'trace' => $e->getTraceAsString()
-            ]);
+            try {
+                Log::error('Guzzle error sending Telegram message', [
+                    'error' => $e->getMessage(),
+                    'chat_id' => $chatId
+                ]);
+            } catch (\Throwable $logError) {
+                error_log('Guzzle error: ' . $e->getMessage());
+            }
             return false;
-        } catch (\Exception $e) {
-            Log::error('Unexpected error sending Telegram message', [
-                'error' => $e->getMessage(),
-                'chat_id' => $chatId,
-                'trace' => $e->getTraceAsString()
-            ]);
+        } catch (\Throwable $e) {
+            try {
+                Log::error('Unexpected error sending Telegram message', [
+                    'error' => $e->getMessage(),
+                    'chat_id' => $chatId,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]);
+            } catch (\Throwable $logError) {
+                error_log('Error sending message: ' . $e->getMessage());
+            }
             return false;
         }
     }
