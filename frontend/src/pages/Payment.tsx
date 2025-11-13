@@ -26,6 +26,8 @@ const Payment: React.FC = () => {
   const isProcessingPaymentRef = useRef(false);
   
   useEffect(() => {
+    console.log('[Payment] 🔵 Component mounted, checking for return parameters...');
+    
     // Инициализируем правильный API base при загрузке (на случай редиректа с оплаты)
     try {
       getApiBase(); // Инициализируем и сохраняем в sessionStorage
@@ -79,54 +81,51 @@ const Payment: React.FC = () => {
       pathname: window.location.pathname
     });
     
-    // Обрабатываем параметры subscribed даже если success=1 не найден
-    // Это важно для возврата с бота
+    // Обрабатываем параметры subscribed (приоритет - обрабатываем сразу, если есть)
     if (isSubscribed !== null && !isProcessingPaymentRef.current) {
-      console.log('[Payment] Found subscribed parameter, processing:', isSubscribed);
+      console.log('[Payment] ✅ Found subscribed parameter, processing:', isSubscribed);
       isProcessingPaymentRef.current = true;
-      handleBotSubscriptionResult(isSubscribed);
       
-      // Очищаем URL после обработки
+      // Небольшая задержка для гарантии, что компонент полностью загружен
       setTimeout(() => {
-        try {
-          const newUrl = window.location.pathname + (window.location.hash || '#/payment');
-          safeHistoryReplace(newUrl);
-        } catch (e) {
-          console.error('Error replacing URL:', e);
-        } finally {
-          isProcessingPaymentRef.current = false;
-        }
-      }, 500);
+        handleBotSubscriptionResult(isSubscribed);
+        
+        // Очищаем URL после обработки
+        setTimeout(() => {
+          try {
+            const newUrl = window.location.pathname + '#/payment';
+            safeHistoryReplace(newUrl);
+          } catch (e) {
+            console.error('Error replacing URL:', e);
+          } finally {
+            isProcessingPaymentRef.current = false;
+          }
+        }, 1000);
+      }, 100);
       return;
     }
     
-    if (isSuccessReturn && !isProcessingPaymentRef.current) {
+    // Обрабатываем возврат с оплаты (если нет параметра subscribed)
+    if (isSuccessReturn && !isProcessingPaymentRef.current && isSubscribed === null) {
+      console.log('[Payment] Payment return detected (no subscribed param), checking subscription and user status');
       isProcessingPaymentRef.current = true;
       
-      // Если есть параметр subscribed от бота, обрабатываем его напрямую
-      if (isSubscribed !== null) {
-        console.log('[Payment] Bot subscription check result:', isSubscribed);
-        handleBotSubscriptionResult(isSubscribed);
-      } else {
-        // Иначе проверяем через API (для возврата с оплаты)
-        console.log('[Payment] Payment return detected, checking subscription and user status');
-        checkPaymentStatusAndShowModal(true).catch(err => {
-          console.error('[Payment] Error checking payment status:', err);
-          setShowPasswordSetup(true);
-        });
-      }
+      checkPaymentStatusAndShowModal(true).catch(err => {
+        console.error('[Payment] Error checking payment status:', err);
+        setShowPasswordSetup(true);
+      });
       
       // Очищаем URL после обработки
       setTimeout(() => {
         try {
-          const newUrl = window.location.pathname + (window.location.hash || '#/payment');
+          const newUrl = window.location.pathname + '#/payment';
           safeHistoryReplace(newUrl);
         } catch (e) {
           console.error('Error replacing URL:', e);
         } finally {
           isProcessingPaymentRef.current = false;
         }
-      }, 500);
+      }, 1000);
     }
   }, []);
 
@@ -217,16 +216,20 @@ const Payment: React.FC = () => {
 
   // Обрабатывает результат проверки подписки от бота
   const handleBotSubscriptionResult = async (subscribed: boolean) => {
-    console.log('[Payment] handleBotSubscriptionResult called with subscribed:', subscribed);
+    console.log('[Payment] 🔄 handleBotSubscriptionResult called with subscribed:', subscribed);
     
     const token = localStorage.getItem('api_token');
+    console.log('[Payment] Token exists:', !!token);
+    
     if (!token) {
-      console.error('No auth token found');
+      console.warn('[Payment] ⚠️ No auth token found');
       if (subscribed) {
         // Если подписан, но нет токена - показываем модалку пароля
+        console.log('[Payment] Showing password setup modal (subscribed but no token)');
         setShowPasswordSetup(true);
       } else {
         // Если не подписан - показываем сообщение об оплате
+        console.log('[Payment] Showing payment required modal (not subscribed and no token)');
         setShowPaymentRequired(true);
       }
       return;
@@ -248,7 +251,7 @@ const Payment: React.FC = () => {
 
         if (subscribed) {
           // Пользователь подписан - показываем окно для ввода данных и создания пароля
-          console.log('[Payment] User is subscribed, showing password setup or referral link');
+          console.log('[Payment] ✅ User is subscribed, showing password setup or referral link');
           console.log('[Payment] User data:', { 
             id: userData.id, 
             has_password: userData.has_password,
@@ -257,6 +260,7 @@ const Payment: React.FC = () => {
           
           if (userData.has_password) {
             // Если пароль уже установлен - показываем Telegram модал с реферальной ссылкой
+            console.log('[Payment] Password exists, showing Telegram modal with referral link');
             const apiBase = getApiBase();
             const correctOrigin = apiBase.replace(/\/$/, '') || window.location.origin;
             const refLink = userData.referral_link || `${correctOrigin}?ref=${userData.id}`;
@@ -264,12 +268,12 @@ const Payment: React.FC = () => {
             setShowTelegramModal(true);
           } else {
             // Пароль не установлен - показываем модалку для создания пароля
-            console.log('[Payment] Password not set, showing password setup modal');
+            console.log('[Payment] ⚠️ Password not set, showing password setup modal');
             setShowPasswordSetup(true);
           }
         } else {
           // Пользователь не подписан - показываем сообщение об оплате
-          console.log('[Payment] User is not subscribed, showing payment required message');
+          console.log('[Payment] ❌ User is not subscribed, showing payment required message');
           setShowPaymentRequired(true);
         }
       } else {

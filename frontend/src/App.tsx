@@ -38,13 +38,20 @@ function App() {
     const subscribed = urlParams.get('subscribed');
     const success = urlParams.get('success');
     
+    console.log('[App] 🔍 Checking URL parameters:', { subscribed, success, hash: window.location.hash });
+    
     // Если есть параметры от бота, перенаправляем на страницу Payment
     if ((subscribed === '1' || subscribed === '0') && success === '1') {
-      console.log('[App] Found bot return parameters, redirecting to payment page');
+      console.log('[App] ✅ Found bot return parameters, redirecting to payment page');
       // Сохраняем параметры в hash, чтобы Payment.tsx мог их обработать
       const newHash = `#/payment?subscribed=${subscribed}&success=${success}`;
+      console.log('[App] Setting hash to:', newHash);
       window.location.hash = newHash;
       setCurrentHash(newHash);
+    } else {
+      // Устанавливаем текущий hash, если параметров нет
+      const currentHash = window.location.hash || '';
+      setCurrentHash(currentHash);
     }
     
     const openJoinHandler = () => setShowJoinModal(true);
