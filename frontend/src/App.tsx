@@ -59,14 +59,20 @@ function App() {
     const onHash = () => {
       try {
         const newHash = window.location.hash || '';
-        console.log('Hash changed to:', newHash);
+        console.log('[App] Hash changed to:', newHash);
         setCurrentHash(newHash);
       } catch (error) {
-        console.error('Error handling hash change:', error);
+        console.error('[App] Error handling hash change:', error);
         // В случае ошибки устанавливаем дефолтный hash
         setCurrentHash('');
       }
     };
+    
+    // Устанавливаем начальный hash
+    const initialHash = window.location.hash || '';
+    console.log('[App] Initial hash:', initialHash);
+    setCurrentHash(initialHash);
+    
     window.addEventListener('hashchange', onHash);
     
     // Глобальная обработка ошибок для предотвращения зависания
@@ -129,13 +135,13 @@ function App() {
     <div className="min-h-screen">
       <Header />
       <main>
-        {currentHash === '#/account' ? (
+        {currentHash === '#/account' || currentHash.startsWith('#/account') ? (
           <Account />
-        ) : currentHash === '#/login' ? (
+        ) : currentHash === '#/login' || currentHash.startsWith('#/login') ? (
           <Login />
-        ) : currentHash === '#/payment' ? (
+        ) : currentHash === '#/payment' || currentHash.startsWith('#/payment') ? (
           <Payment />
-        ) : currentHash === '#/check-subscription' ? (
+        ) : currentHash === '#/check-subscription' || currentHash.startsWith('#/check-subscription') ? (
           <CheckSubscription />
         ) : (
           <>
