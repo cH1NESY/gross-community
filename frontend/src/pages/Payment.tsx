@@ -38,39 +38,35 @@ const Payment: React.FC = () => {
     let isSuccessReturn = false;
     let isSubscribed = null; // null = не проверено, true = подписан, false = не подписан
     
-    // Сначала проверяем search параметры (обычный способ)
-    const urlParams = new URLSearchParams(window.location.search);
-    isSuccessReturn = urlParams.get('success') === '1';
-    const subscribedParam = urlParams.get('subscribed');
-    if (subscribedParam !== null) {
-      isSubscribed = subscribedParam === '1';
+    // Сначала проверяем hash параметры (App.tsx перенаправляет сюда)
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+      isSuccessReturn = hashParams.get('success') === '1';
+      const subscribedParam = hashParams.get('subscribed');
+      if (subscribedParam !== null) {
+        isSubscribed = subscribedParam === '1';
+      }
     }
     
-    // Если не нашли в search, проверяем hash (для hash-based routing)
-    if (!isSuccessReturn && window.location.hash) {
-      const hashMatch = window.location.hash.match(/[?&]success=1/);
-      if (hashMatch) {
-        isSuccessReturn = true;
-        console.log('[Payment] Found success=1 in hash');
-      }
-      // Проверяем subscribed в hash
-      const subscribedMatch = window.location.hash.match(/[?&]subscribed=([01])/);
-      if (subscribedMatch) {
-        isSubscribed = subscribedMatch[1] === '1';
+    // Если не нашли в hash, проверяем search параметры (обычный способ)
+    if (isSubscribed === null) {
+      const urlParams = new URLSearchParams(window.location.search);
+      isSuccessReturn = urlParams.get('success') === '1' || isSuccessReturn;
+      const subscribedParam = urlParams.get('subscribed');
+      if (subscribedParam !== null) {
+        isSubscribed = subscribedParam === '1';
       }
     }
     
     // Также проверяем URL напрямую (на случай, если YooKassa или бот вернул нестандартный формат)
-    if (!isSuccessReturn) {
+    if (isSubscribed === null) {
       const fullUrl = window.location.href;
+      const subscribedMatch = fullUrl.match(/[?&]subscribed=([01])/);
+      if (subscribedMatch) {
+        isSubscribed = subscribedMatch[1] === '1';
+      }
       if (fullUrl.includes('success=1')) {
         isSuccessReturn = true;
-        console.log('[Payment] Found success=1 in full URL');
-      }
-      // Проверяем subscribed в полном URL
-      const subscribedMatch = fullUrl.match(/[?&]subscribed=([01])/);
-      if (subscribedMatch && isSubscribed === null) {
-        isSubscribed = subscribedMatch[1] === '1';
       }
     }
     
@@ -79,8 +75,30 @@ const Payment: React.FC = () => {
       hash: window.location.hash,
       href: window.location.href,
       isSuccessReturn,
-      isSubscribed
+      isSubscribed,
+      pathname: window.location.pathname
     });
+    
+    // Обрабатываем параметры subscribed даже если success=1 не найден
+    // Это важно для возврата с бота
+    if (isSubscribed !== null && !isProcessingPaymentRef.current) {
+      console.log('[Payment] Found subscribed parameter, processing:', isSubscribed);
+      isProcessingPaymentRef.current = true;
+      handleBotSubscriptionResult(isSubscribed);
+      
+      // Очищаем URL после обработки
+      setTimeout(() => {
+        try {
+          const newUrl = window.location.pathname + (window.location.hash || '#/payment');
+          safeHistoryReplace(newUrl);
+        } catch (e) {
+          console.error('Error replacing URL:', e);
+        } finally {
+          isProcessingPaymentRef.current = false;
+        }
+      }, 500);
+      return;
+    }
     
     if (isSuccessReturn && !isProcessingPaymentRef.current) {
       isProcessingPaymentRef.current = true;

@@ -33,6 +33,20 @@ function App() {
   } | null>(null);
 
   useEffect(() => {
+    // Проверяем параметры subscribed и success в URL при загрузке
+    const urlParams = new URLSearchParams(window.location.search);
+    const subscribed = urlParams.get('subscribed');
+    const success = urlParams.get('success');
+    
+    // Если есть параметры от бота, перенаправляем на страницу Payment
+    if ((subscribed === '1' || subscribed === '0') && success === '1') {
+      console.log('[App] Found bot return parameters, redirecting to payment page');
+      // Сохраняем параметры в hash, чтобы Payment.tsx мог их обработать
+      const newHash = `#/payment?subscribed=${subscribed}&success=${success}`;
+      window.location.hash = newHash;
+      setCurrentHash(newHash);
+    }
+    
     const openJoinHandler = () => setShowJoinModal(true);
     window.addEventListener('open-join-modal', openJoinHandler as EventListener);
     const onHash = () => {
