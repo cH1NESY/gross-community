@@ -199,12 +199,16 @@ const Payment: React.FC = () => {
 
   // Обрабатывает результат проверки подписки от бота
   const handleBotSubscriptionResult = async (subscribed: boolean) => {
+    console.log('[Payment] handleBotSubscriptionResult called with subscribed:', subscribed);
+    
     const token = localStorage.getItem('api_token');
     if (!token) {
       console.error('No auth token found');
       if (subscribed) {
+        // Если подписан, но нет токена - показываем модалку пароля
         setShowPasswordSetup(true);
       } else {
+        // Если не подписан - показываем сообщение об оплате
         setShowPaymentRequired(true);
       }
       return;
@@ -225,8 +229,13 @@ const Payment: React.FC = () => {
         setTelegramTag(userData.telegram_tag || null);
 
         if (subscribed) {
-          // Пользователь подписан - показываем окно пароля или реферальную ссылку
+          // Пользователь подписан - показываем окно для ввода данных и создания пароля
           console.log('[Payment] User is subscribed, showing password setup or referral link');
+          console.log('[Payment] User data:', { 
+            id: userData.id, 
+            has_password: userData.has_password,
+            referral_link: userData.referral_link 
+          });
           
           if (userData.has_password) {
             // Если пароль уже установлен - показываем Telegram модал с реферальной ссылкой
@@ -236,7 +245,8 @@ const Payment: React.FC = () => {
             setReferralLink(refLink);
             setShowTelegramModal(true);
           } else {
-            // Пароль не установлен - показываем модалку пароля
+            // Пароль не установлен - показываем модалку для создания пароля
+            console.log('[Payment] Password not set, showing password setup modal');
             setShowPasswordSetup(true);
           }
         } else {
@@ -246,6 +256,7 @@ const Payment: React.FC = () => {
         }
       } else {
         // Ошибка получения данных пользователя
+        console.error('[Payment] Failed to fetch user data:', userResponse?.status);
         if (subscribed) {
           setShowPasswordSetup(true);
         } else {
@@ -253,7 +264,7 @@ const Payment: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('[Payment] Error fetching user data:', error);
       if (subscribed) {
         setShowPasswordSetup(true);
       } else {
