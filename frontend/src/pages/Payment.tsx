@@ -3,6 +3,7 @@ import { X, ExternalLink } from 'lucide-react';
 import ThankYouModal from '../components/ThankYouModal';
 import PasswordSetupModal from '../components/PasswordSetupModal';
 import TelegramModal from '../components/TelegramModal';
+import JoinModal from '../components/JoinModal';
 import { safeFetch, safeNavigate, safeHistoryReplace } from '../utils/safeAsync';
 import { apiUrl, getApiBase } from '../utils/apiBase';
 
@@ -20,6 +21,7 @@ const Payment: React.FC = () => {
   const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [showSubscriptionPrompt, setShowSubscriptionPrompt] = useState(false);
   const [showPaymentRequired, setShowPaymentRequired] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
   const [telegramTag, setTelegramTag] = useState<string | null>(null);
@@ -224,9 +226,9 @@ const Payment: React.FC = () => {
     if (!token) {
       console.warn('[Payment] ⚠️ No auth token found');
       if (subscribed) {
-        // Если подписан, но нет токена - показываем модалку пароля
-        console.log('[Payment] Showing password setup modal (subscribed but no token)');
-        setShowPasswordSetup(true);
+        // Если подписан, но нет токена - показываем модалку регистрации
+        console.log('[Payment] Showing registration modal (subscribed but no token)');
+        setShowJoinModal(true);
       } else {
         // Если не подписан - показываем сообщение об оплате
         console.log('[Payment] Showing payment required modal (not subscribed and no token)');
@@ -250,8 +252,8 @@ const Payment: React.FC = () => {
         setTelegramTag(userData.telegram_tag || null);
 
         if (subscribed) {
-          // Пользователь подписан - показываем окно для ввода данных и создания пароля
-          console.log('[Payment] ✅ User is subscribed, showing password setup or referral link');
+          // Пользователь подписан - показываем окно регистрации, затем пароль, затем реферальную ссылку
+          console.log('[Payment] ✅ User is subscribed, showing registration flow');
           console.log('[Payment] User data:', { 
             id: userData.id, 
             has_password: userData.has_password,
@@ -267,9 +269,10 @@ const Payment: React.FC = () => {
             setReferralLink(refLink);
             setShowTelegramModal(true);
           } else {
-            // Пароль не установлен - показываем модалку для создания пароля
-            console.log('[Payment] ⚠️ Password not set, showing password setup modal');
-            setShowPasswordSetup(true);
+            // Пароль не установлен - показываем модалку регистрации, затем пароль
+            console.log('[Payment] ⚠️ Password not set, showing registration modal first');
+            setUserId(userData.id);
+            setShowJoinModal(true);
           }
         } else {
           // Пользователь не подписан - показываем сообщение об оплате
@@ -280,7 +283,7 @@ const Payment: React.FC = () => {
         // Ошибка получения данных пользователя
         console.error('[Payment] Failed to fetch user data:', userResponse?.status);
         if (subscribed) {
-          setShowPasswordSetup(true);
+          setShowJoinModal(true);
         } else {
           setShowPaymentRequired(true);
         }
@@ -288,7 +291,7 @@ const Payment: React.FC = () => {
     } catch (error) {
       console.error('[Payment] Error fetching user data:', error);
       if (subscribed) {
-        setShowPasswordSetup(true);
+        setShowJoinModal(true);
       } else {
         setShowPaymentRequired(true);
       }
@@ -463,7 +466,13 @@ const Payment: React.FC = () => {
         {showPasswordSetup && (
           <PasswordSetupModal 
             onClose={() => setShowPasswordSetup(false)} 
-            userId={userId || 0} 
+            userId={userId || 0}
+            onPasswordSet={(refLink: string) => {
+              // После создания пароля показываем Telegram модал с реферальной ссылкой
+              setShowPasswordSetup(false);
+              setReferralLink(refLink);
+              setShowTelegramModal(true);
+            }}
           />
         )}
         {showTelegramModal && (
@@ -505,6 +514,43 @@ const Payment: React.FC = () => {
             onPayment={() => {
               setShowPaymentRequired(false);
               triggerPayment();
+            }}
+          />
+        )}
+        {showJoinModal && (
+          <JoinModal
+            onClose={() => setShowJoinModal(false)}
+            mode="subscribed"
+            onContinue={() => {
+              setShowJoinModal(false);
+              // После регистрации показываем модалку для создания пароля
+              const token = localStorage.getItem('api_token');
+              if (token) {
+                // Получаем userId из токена или из состояния
+                safeFetch(apiUrl('/user'), {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                  }
+                }, 10000).then(userResponse => {
+                  if (userResponse && userResponse.ok) {
+                    return userResponse.json();
+                  }
+                  return null;
+                }).then(userData => {
+                  if (userData) {
+                    setUserId(userData.id);
+                    setShowPasswordSetup(true);
+                  }
+                }).catch(err => {
+                  console.error('Error fetching user after registration:', err);
+                  // Показываем модалку пароля в любом случае
+                  setShowPasswordSetup(true);
+                });
+              } else {
+                // Если токена нет, все равно показываем модалку пароля
+                setShowPasswordSetup(true);
+              }
             }}
           />
         )}

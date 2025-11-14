@@ -6,11 +6,13 @@ import TelegramModal from './TelegramModal';
 
 interface JoinModalProps {
   onClose: () => void;
-  onConsultation: (userData?: FormData) => void;
-  onPayment: () => void;
+  onConsultation?: (userData?: FormData) => void;
+  onPayment?: () => void;
+  onContinue?: () => void; // Для режима подписанного пользователя
+  mode?: 'default' | 'subscribed'; // Режим модального окна
 }
 
-const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPayment }) => {
+const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPayment, onContinue, mode = 'default' }) => {
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
     telegramTag: '',
@@ -76,7 +78,7 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (action: 'consultation' | 'payment') => {
+  const handleSubmit = async (action: 'consultation' | 'payment' | 'continue') => {
     if (!validateForm()) {
       return;
     }
@@ -110,9 +112,12 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
         window.dispatchEvent(new CustomEvent('authChanged', { detail: data.user }));
         
         // Переходим к следующему шагу
-        if (action === 'consultation') {
+        if (action === 'continue' && onContinue) {
+          // Режим для подписанных пользователей - переходим к созданию пароля
+          onContinue();
+        } else if (action === 'consultation' && onConsultation) {
           onConsultation(formData);
-        } else {
+        } else if (action === 'payment' && onPayment) {
           // Переходим на страницу оплаты
           window.location.hash = '#/payment';
           window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -307,20 +312,31 @@ const JoinModal: React.FC<JoinModalProps> = ({ onClose, onConsultation, onPaymen
             <p className="text-red-400 text-sm">Необходимо согласие с условиями</p>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-            <button
-              onClick={() => handleSubmit('consultation')}
-              className="bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white border border-pink-500 px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 w-full"
-            >
-              Получить консультацию
-            </button>
-            <button
-              onClick={() => handleSubmit('payment')}
-              className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 w-full"
-            >
-              Оплатить
-            </button>
-          </div>
+          {mode === 'subscribed' ? (
+            <div className="pt-4">
+              <button
+                onClick={() => handleSubmit('continue')}
+                className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95"
+              >
+                Продолжить
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+              <button
+                onClick={() => handleSubmit('consultation')}
+                className="bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white border border-pink-500 px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 w-full"
+              >
+                Получить консультацию
+              </button>
+              <button
+                onClick={() => handleSubmit('payment')}
+                className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 w-full"
+              >
+                Оплатить
+              </button>
+            </div>
+          )}
 
           <div className="pt-2 text-sm text-pink-100">
             Уже зарегистрированы?{' '}

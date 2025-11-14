@@ -6,9 +6,10 @@ import TelegramModal from './TelegramModal';
 interface PasswordSetupModalProps {
   onClose: () => void;
   userId: number;
+  onPasswordSet?: (referralLink: string) => void; // Callback после успешного создания пароля
 }
 
-const PasswordSetupModal: React.FC<PasswordSetupModalProps> = ({ onClose, userId }) => {
+const PasswordSetupModal: React.FC<PasswordSetupModalProps> = ({ onClose, userId, onPasswordSet }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -63,8 +64,16 @@ const PasswordSetupModal: React.FC<PasswordSetupModalProps> = ({ onClose, userId
 
       if (response.ok) {
         const data = await response.json();
-        setReferralLink(data.referral_link);
-        setShowTelegramModal(true);
+        const refLink = data.referral_link || '';
+        setReferralLink(refLink);
+        
+        // Если передан callback, вызываем его вместо показа TelegramModal напрямую
+        if (onPasswordSet) {
+          onPasswordSet(refLink);
+        } else {
+          // Старый способ - показываем TelegramModal напрямую
+          setShowTelegramModal(true);
+        }
       } else {
         const errorData = await response.json();
         alert(`Ошибка: ${errorData.message || 'Неизвестная ошибка'}`);
