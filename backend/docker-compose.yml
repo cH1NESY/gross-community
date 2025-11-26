@@ -32,6 +32,8 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
     networks:
       - custom_network
     depends_on:
