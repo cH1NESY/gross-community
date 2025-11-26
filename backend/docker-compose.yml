@@ -29,6 +29,9 @@ services:
     volumes:
       - .:/var/www/html
       - ./docker/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-xdebug.ini
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
     networks:
       - custom_network
     depends_on:
